@@ -47,9 +47,9 @@ Here is the description of the participant in the paper:
 ```{r data preparation}
 
 ### code for preparing census data about education, will not used after saving RData
-# df_tmp <- bruceR::import(here::here("A0401_CNH_Census7_Age_education_edited.xls"))
+# df_tmp <- bruceR::import(here::here("A0401_CNH_Census7_Age_education_edited.xls"))  # import data that downloaded from census website
 # # 
-# # # create a list of columans
+# # # create a list of columns
 # edu_colnames <- tidyr::crossing(c("pop", "noSchool", "preSchool", "elementary",
 #                                   "middle", "high", "technical", "university", "master", "PhD"),
 #                                 c("all", "male", "fmale")) %>%
@@ -97,7 +97,8 @@ Total number of participants in China is `n = `r length(unique(dat_cn$ResponseId
 ```{r Sex and Age, message=FALSE, warning=FALSE}
 df_census7_adults <- df_census7_edu %>%
   dplyr::filter(Age >= 18)
-dat_gender <- dat_cn %>%
+
+dat_Sex <- dat_cn %>%
   dplyr::filter(Gender == "Female" | Gender == "Male") %>%
   dplyr::count(Gender) %>%
   dplyr::mutate(Proportion = round(n / sum(n), 2) * 100,
@@ -105,35 +106,33 @@ dat_gender <- dat_cn %>%
   dplyr::select(Site, Gender, Proportion) %>%
   dplyr::rename(Sex = Gender)
 
-df_census7_adults_sex <- df_census7_adults %>%
-  dplyr::select(pop_fmale, pop_male) %>%
+df_census7_sex <- df_census7_adults %>%
+  dplyr::select(pop_female, pop_male) %>%
   dplyr::mutate_if(is.character, as.numeric) %>%
   # dplyr::select(-Age) %>%
   colSums() %>%
   data.frame() %>%
   dplyr::rename(N=".")
 
-df_census7_adults_sex$Sex <- rownames(df_census7_adults_sex)
+df_census7_sex$Sex <- rownames(df_census7_sex)
 
-df_census7_adults_sex <- df_census7_adults_sex %>%
-  dplyr::mutate(Sex = ifelse(Sex == "pop_fmale", "Female", "Male"))
+df_census7_sex <- df_census7_sex %>%
+  dplyr::mutate(Sex = ifelse(Sex == "pop_female", "Female", "Male"))
   
-df_census7_adults_sex <- df_census7_adults_sex %>%
+df_census7_sex <- df_census7_sex %>%
   dplyr::mutate(Proportion = N/sum(N)) %>%
   dplyr::mutate(Site = "Census7") %>%
   dplyr::select(Site, Sex, Proportion) %>%
   dplyr::mutate(Proportion = round(as.numeric(Proportion*100), 0))
 
-rownames(df_census7_adults_sex) <- NULL
+rownames(df_census7_sex) <- NULL
 
-df_sex_ratio <- rbind(dat_gender, df_census7_adults_sex)
+df_sex_ratio <- rbind(dat_Sex, df_census7_sex)
 
 ### get the data for Bayesian mutlinomial test as in JASP
 df_sex_ratio_jasp <- df_sex_ratio %>%
   tidyr::pivot_wider(names_from = Site,
                      values_from = Proportion)
-
-BF_h2a_sex<- BayesMultiNomial(dataset = df_sex_ratio_jasp, factor = "Gender", observed = "Ruggeri_2022", expected = "Census7")
 
 fig1a <- ggplot(df_sex_ratio, aes(Site, Proportion,fill=Sex)) +
   geom_col() +
@@ -172,10 +171,10 @@ dat_age_Ruggeri2022 <- dat_cn %>%
   dplyr::mutate(Site = "Ruggeri_etal_2022",
                 Sex = ifelse(Sex == "Female", "female_R", "male_R"))
 
-df_census7_age <- df_census7_adults %>%
-  dplyr::select(Age, pop_fmale, pop_male) %>%
+df_age_census7 <- df_census7_adults %>%
+  dplyr::select(Age, pop_female, pop_male) %>%
   dplyr::mutate_if(is.character, as.numeric) %>%
-  dplyr::rename(Female = pop_fmale, Male=pop_male) %>%
+  dplyr::rename(Female = pop_female, Male=pop_male) %>%
   tidyr::pivot_longer(cols = c(Male, Female),
                       names_to = "Sex",
                       values_to = "N") %>%
@@ -191,11 +190,10 @@ df_census7_age <- df_census7_adults %>%
   dplyr::summarise(N_sum = sum(N)) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(Proportion = round(N_sum / sum(N_sum), 4) * 100) %>%
-  tidyr::complete(ageBins, Sex, fill=list(Proportion=0)) # %>%
-  # dplyr::mutate(Site = "Census7_CN",
-  #               Sex = ifelse(Sex == "Female", "female_C", "male_C")) %>%
+  tidyr::complete(ageBins, Sex, fill=list(Proportion=0))
+
 ### Plotting
-fig1b <- ggplot(data= df_census7_age, aes(x=ageBins, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
+fig1b <- ggplot(data= df_age_census7, aes(x=ageBins, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
   geom_col(alpha=0.5, width = 1) +
   geom_line(data = dat_age_Ruggeri2022, aes(x=ageBins_pyr,
                                       y = ifelse(Sex == "male_R", -Proportion, Proportion),
@@ -214,9 +212,8 @@ fig1b <- ggplot(data= df_census7_age, aes(x=ageBins, y=ifelse(Sex=="Male", -Prop
         legend.title = element_blank(),
         axis.title = element_text(size = 16,family = "serif"),
         axis.text = element_text(size = 16,family = "serif"))
-
+fig1b
 ```
-
 
 ### Education
 
@@ -227,54 +224,58 @@ In the census data, education was: "no school", "pre school", "primary school", 
 In Ruggeri et al. (2022), the edu data is: Primary ed., Secondary ed.,  Technical ed., Bachelor, MBA, Graduate,  PhD.
 
 To make it comparable, we re-code both and used the following schema:
-"noschool", "primary", "secondary"(include both middle and high school), "Technical college", "Bachelor", "master" (include graduate and MBA), and "PhD".
+"noschool", "primary", "secondary" (include both middle and high school), "Technical college", "Bachelor", "master" (include graduate and MBA), and "PhD".
 
-
-```{r}
-df_census7_adults_edu <- df_census7_edu %>%
+```{r plot edu}
+df_edu_census7 <- df_census7_edu %>%
   dplyr::filter(Age >= 18) %>%
   dplyr::select(-ends_with("_all")) %>%
   dplyr::select(-starts_with("pop_")) %>%
   dplyr::mutate_if(is.character, as.numeric)
 
-df_census7_adults_edu_sum <-  colSums(df_census7_adults_edu[-1]) %>%
+## get the sum of all ages
+df_edu_sum_census7 <-  colSums(df_edu_census7[-1]) %>%
   data.frame()
 
-df_census7_adults_edu_sum$Edu <- rownames(df_census7_adults_edu_sum)
+# make row name as a column
+df_edu_sum_census7$Edu <- rownames(df_edu_sum_census7)
+rownames(df_edu_sum_census7) <- NULL
 
-df_census7_adults_edu_sum <- df_census7_adults_edu_sum %>%
+# rename column and separate columns
+df_edu_sum_census7 <- df_edu_sum_census7 %>%
   dplyr::rename("N" = ".") %>%
   tidyr::separate(Edu, c("Edu", "Sex"))
 
-df_census7_adults_edu_sum $Source <- "Census7"
+df_edu_sum_census7$Source <- "Census7"
 
 # recode the edu:
-df_census7_adults_edu_sum <- df_census7_adults_edu_sum %>%
+df_edu_sum_census7 <- df_edu_sum_census7 %>%
   dplyr::mutate(Edu = ifelse(Edu == "preSchool", "noSchool", 
                              ifelse(Edu == "middle" | Edu == "high", "Secondary", Edu))) %>%
   dplyr::group_by(Sex, Edu) %>%
   dplyr::summarise(N_new = sum(N)) %>%
   dplyr::ungroup()
   
-df_census7_adults_edu_sum$Edu<- dplyr::recode(df_census7_adults_edu_sum$Edu, 
-                                              noSchool = "NoSchool",
-                  elementary = "Primary",
-                  Secondary = "Secondary" ,
-                  technical = "Technical" ,
-                  university = "Bachelor",
-                  master ="Master",
-                  PhD = "PhD"
-                  ) %>%
+# using standardized names for edu levels
+df_edu_sum_census7$Edu<- dplyr::recode(df_edu_sum_census7$Edu, 
+                                       noSchool = "NoSchool",
+                                       elementary = "Primary",
+                                       Secondary = "Secondary" ,
+                                       technical = "Technical" ,
+                                       university = "Bachelor",
+                                       master ="Master",
+                                       PhD = "PhD"
+                                       ) %>%
   factor(., levels = c("NoSchool", "Primary", "Secondary",
-                                        "Technical", "Bachelor", "Master", "PhD"))
+                       "Technical", "Bachelor", "Master", "PhD"))
 
-df_census7_adults_edu_sum_prop <- df_census7_adults_edu_sum %>%
-  dplyr::mutate(Sex = ifelse(Sex == "fmale", "Female", "Male")) %>%
+df_edu_sum_census7_prop <- df_edu_sum_census7 %>%
+  dplyr::mutate(Sex = ifelse(Sex == "female", "Female", "Male")) %>%
   dplyr::arrange(Sex, Edu) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(Proportion = round(N_new / sum(N_new), 4) * 100) 
   
-
+## Prepare data from Ruggeri et al (2022)
 dat_cn_edu <- dat_cn %>%
   dplyr::group_by(Gender, EducationCompleted) %>%
   dplyr::summarise(N_edu = n())
@@ -301,7 +302,7 @@ dat_cn_edu_prop <- dat_cn_edu %>%
   dplyr::ungroup() %>%
   dplyr::mutate(Proportion = round(N_new / sum(N_new), 4) * 100)
 
-fig1c <- ggplot(data= df_census7_adults_edu_sum_prop, 
+fig1c <- ggplot(data= df_edu_sum_census7_prop, 
                 aes(x=Edu, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
   geom_col(alpha=0.5, width = 1) +
   geom_line(data = dat_cn_edu_prop, 
@@ -324,11 +325,245 @@ fig1c <- ggplot(data= df_census7_adults_edu_sum_prop,
         axis.text = element_text(size = 16,family = "serif"))
 
 fig1 <- fig1a + fig1b + fig1c + plot_annotation(tag_levels = 'A')
-ggsave("fig1.pdf", fig1, device = "pdf", width=20, height = 9)
+ggsave("fig1_CHNData.pdf", fig1, device = "pdf", width=20, height = 9)
 
 fig1
 ```
 
 
-### Geographical distribution
+### Geographical 
 
+```{r geographical distr}
+### the code was largely learnted from: https://github.com/liangliangzhuang/R_example
+
+### prepparing the map
+pacman::p_load(geojsonsf, RColorBrewer, rgdal, ggplot2, maptools, mapproj, ggsn, ggspatial, readxl, sf, cowplot)
+
+API_pre = "http://xzqh.mca.gov.cn/data/" # get map data from website
+ChinaMap = st_read(dsn = paste0(API_pre, "quanguo.json"), stringsAsFactors=FALSE) 
+sf::st_crs(ChinaMap) <- 4326 # use coordinates 4326
+
+# save(ChinaMap, file = "./CHNMap/China_Map.RData")
+# load("./CHNMap/China_Map.RData")
+
+China_border_line <- sf::st_read(dsn = paste0(API_pre, "quanguo_Line.geojson"), stringsAsFactors=FALSE) # read border line of the country
+sf::st_crs(China_border_line) = 4326
+
+gjx <- China_border_line[China_border_line$QUHUADAIMA == "guojiexian",]  ## 选择区划代码为国界线的区域
+
+# 读取省份经纬度
+province <- read.csv("CHNMap/province3.csv")
+
+fig2a <-  ggplot() +
+   geom_sf(data = ChinaMap, fill='NA') +    # 绘制主图
+   geom_sf(data = gjx) +                # 绘制国界线及十段线
+   geom_text(data = province,aes(x=dili_Jd, y=dili_Wd,label=省市),  ##添加省份名称
+             position = "identity",
+             size=3,
+             check_overlap = TRUE) +
+   labs(title="Map of China")+
+   theme(plot.title = element_text(color="black", size=16, face="bold",vjust = 0.1,hjust = 0.5),
+                                        legend.title=element_blank(),
+                                        legend.position = c(0.2,0.2),
+                                        panel.grid=element_blank(),
+                                        panel.background=element_blank(),
+                                        axis.text=element_blank(),
+                                        axis.ticks=element_blank(),
+                                        axis.title=element_blank()
+                                      ) +
+  ##添加指北针，“style”参数可以更改样式
+  annotation_north_arrow(location='tl', which_north='false',
+                         style=north_arrow_orienteering())
+
+fig2a
+
+# 读入数据
+nine_lines = read_sf('CHNMap/Nanhai.geojson') 
+  
+# 绘制九段线小图
+fig2b <- ggplot() +
+  geom_sf(data = ChinaMap, fill='NA', size=0.5) + 
+  geom_sf(data = nine_lines, color='black', size=0.5)+
+  ##去掉主图的部分区域
+  coord_sf(ylim = c(-4028017,-1877844),xlim = c(117131.4,2115095),crs="+proj=laea +lat_0=40 +lon_0=104")+
+  theme(
+    aspect.ratio = 1.25, #调节长宽比
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    panel.border = element_rect(fill=NA,color="grey10",linetype=1,size=0.5),
+    plot.margin=unit(c(0,0,0,0),"mm"))
+
+fig2b
+
+fig2 <- cowplot::ggdraw() +
+  cowplot::draw_plot(fig2a) +
+  cowplot::draw_plot(fig2b, x = 0.8, y = 0, width = 0.13, height = 0.39)
+
+fig2
+
+
+```
+
+
+```{r}
+colour <- read.csv("CHNMap/colour4.csv")
+head(colour)
+
+colour$QUHUADAIMA <- as.character(colour$QUHUADAIMA)
+#colour$colour <- as.character(colour$colour)
+# colour$colour <- noquote(colour$colour)
+
+# colour$colour[c(28, 29,30)] <- c("1000+", "1000+", "1000+")
+
+ChinaMap2 <- dplyr::left_join(ChinaMap,colour, by= "QUHUADAIMA")
+
+fig2c <-  ggplot() +
+  geom_sf(
+    data = ChinaMap2,
+    aes(fill = factor(colour))) +
+    ## 填色
+      scale_fill_manual(
+        "class",
+        values = c("#9CEED3", "#79CBC2", "#5EA9AC", "#4B8793", "#3C6777"),
+        breaks = c("0~200", "200~400", "400~600", "600~1000", ">1000"),
+        labels = c("0~200", "200~400", "400~600", "600~1000", ">1000")
+      ) +
+      geom_sf(data = gjx) +
+      geom_text(
+        data = province,
+        aes(x = dili_Jd, y = dili_Wd, label = 省市),
+        position = "identity",
+        size = 3,
+        check_overlap = TRUE
+      ) +
+      labs(title = "Map of China") +
+      theme(
+        plot.title = element_text(
+          color = "black",
+          size = 16,
+          face = "bold",
+          vjust = 0.1,
+          hjust = 0.5
+        ),
+        legend.title = element_blank(),
+        legend.position = c(0.2, 0.2),
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_blank()
+      ) +
+      annotation_north_arrow(
+        location = 'tl',
+        which_north = 'false',
+        style = north_arrow_orienteering()
+      )
+
+
+# 读入九段线数据
+nine_lines = read_sf('CHNMap/Nanhai.geojson') 
+  
+# 绘制九段线小图
+nine_map <- ggplot() +
+   geom_sf(data = ChinaMap2,fill='NA', size=0.5) + 
+   geom_sf(data = nine_lines,color='black',size=0.5)+
+   coord_sf(ylim = c(-4028017,-1877844),xlim = c(117131.4,2115095),crs="+proj=laea +lat_0=40 +lon_0=104")+
+   theme(
+     aspect.ratio = 1.25, #调节长宽比
+     axis.text = element_blank(),
+     axis.ticks = element_blank(),
+     axis.title = element_blank(),
+     panel.grid = element_blank(),
+     panel.background = element_blank(),
+     panel.border = element_rect(fill=NA,color="grey10",linetype=1,size=0.5),
+     plot.margin=unit(c(0,0,0,0),"mm"))
+ 
+# 使用cowplot包将大图小图拼在一起
+fig <- cowplot::ggdraw() +
+   cowplot::draw_plot(fig2c) +
+   cowplot::draw_plot(nine_map, x = 0.8, y = 0, width = 0.13, height = 0.39)
+fig
+```
+
+```{r}
+colour$new_colour <- rep(0,nrow(colour))
+##给目标省份赋予不同的数值
+colour$new_colour[which(colour$shengfen=="重庆")] <- 1
+colour$new_colour[which(colour$shengfen=="山西")] <- 2
+colour$new_colour[which(colour$shengfen=="新疆")] <- 3
+colour$new_colour[which(colour$shengfen=="内蒙古")] <- 4
+ChinaMap3 <- dplyr::left_join(ChinaMap,colour,by= "QUHUADAIMA")
+head(colour)
+```
+
+```{r}
+fig2d <-  ggplot() +
+  geom_sf(
+    data = ChinaMap3,
+    aes(fill = factor(new_colour))) +
+    ## 填色
+      scale_fill_manual(
+        "class",
+         values = c("#FFFFFF", "#79CBC2", "#5EA9AC", "#4B8793", "#3C6777"),
+        breaks = c("0", "1", "2", "3", "4"),
+        labels = c("0", "1", "2", "3", "4")
+      ) +
+      geom_sf(data = gjx) +
+      geom_text(
+        data = province,
+        aes(x = dili_Jd, y = dili_Wd, label = 省市),
+        position = "identity",
+        size = 3,
+        check_overlap = TRUE
+      ) +
+      labs(title = "Map of China") +
+      theme(
+        plot.title = element_text(
+          color = "black",
+          size = 16,
+          face = "bold",
+          vjust = 0.1,
+          hjust = 0.5
+        ),
+        legend.title = element_blank(),
+        legend.position = c(0.2, 0.2),
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_blank()
+      ) +
+      annotation_north_arrow(
+        location = 'tl',
+        which_north = 'false',
+        style = north_arrow_orienteering()
+      )
+
+
+# 读入九段线数据
+nine_lines = read_sf('CHNMap/Nanhai.geojson') 
+  
+# 绘制九段线小图
+nine_map <- ggplot() +
+   geom_sf(data = ChinaMap2,fill='NA', size=0.5) + 
+   geom_sf(data = nine_lines,color='black',size=0.5)+
+   coord_sf(ylim = c(-4028017,-1877844),xlim = c(117131.4,2115095),crs="+proj=laea +lat_0=40 +lon_0=104")+
+   theme(
+     aspect.ratio = 1.25, #调节长宽比
+     axis.text = element_blank(),
+     axis.ticks = element_blank(),
+     axis.title = element_blank(),
+     panel.grid = element_blank(),
+     panel.background = element_blank(),
+     panel.border = element_rect(fill=NA,color="grey10",linetype=1,size=0.5),
+     plot.margin=unit(c(0,0,0,0),"mm"))
+ 
+# 使用cowplot包将大图小图拼在一起
+fig <- cowplot::ggdraw() +
+   cowplot::draw_plot(fig2d) +
+   cowplot::draw_plot(nine_map, x = 0.8, y = 0, width = 0.13, height = 0.39)
+fig
+```
