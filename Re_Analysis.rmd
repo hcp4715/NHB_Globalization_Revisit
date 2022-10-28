@@ -13,7 +13,7 @@ Aim: Illustrate the representativeness of Chinese data in terms of gender, age, 
 rm(list = ls())
 
 if (!require("pacman")) install.packages("pacman")      # install the package manager pacman
-pacman::p_load(tidyverse, easystats, patchwork, here)
+pacman::p_load(tidyverse, easystats, patchwork, here, bruceR)
 
 # Load pre-processed census data, not that the largest age means >= that value
 load(here::here("Re_Analysis_CHN.RData"))
@@ -86,8 +86,55 @@ Here is the description of the participant in the paper:
 #   dplyr::mutate(Age = ifelse(Age == "100岁及以上", 100, Age)) %>% # convert >=100 to 100
 #   dplyr::mutate(Age = as.numeric(Age)) %>%
 #   dplyr::filter(!is.na(Age)) 
+# 
+# Reg_Name_EN <- c("Whole_Country_Mainland", "Beijing", "Tianjin", "Hebei", "Shanxi", "Inner Mongolia", "Liaoning",
+#                  "Jilin", "Heilongjiang", "Shanghai", "Jiangsu", "Zhejiang", "Anhui", "Fujian", "Jiangxi", "Shandong",
+#                  "Henan", "Hubei", "Hunan", "Guangdong", "Guangxi", "Hainan", "Chongqing", "Sichuan", "Guizhou", 
+#                  "Yunnan", "Tibet", "Shaanxi", "Gansu", "Qinghai", "Ningxia", "Xinjiang")
+# 
+# df_tmp <- bruceR::import(here::here("A0105_region_age_sex_edited.xls"))  # import data that downloaded from census website
+# 
+# newColNames <- colnames(df_tmp)
+# newColNames <- gsub("岁", "years", newColNames)
+# newColNames <- gsub("及以上", "", newColNames)
+# newColNames <- gsub("-", "_", newColNames)
+# newColNames[c(1,2)] <- c( "Regions", "All")
+# 
+# newColNames2 <- NULL
+# 
+# for (ii in 1:length(newColNames)){
+#   # if contain ".."
+#   if (grepl("...", newColNames[ii], fixed=TRUE)){
+#     #print(newColNames[ii])
+#     # extract the number
+#     tmp_num <- as.numeric(gsub("...", "", newColNames[ii]))
+#     print(tmp_num)
+#     
+#     # ii-1 does not contain "...", male, else, female
+#     if (!grepl("...", newColNames[ii-1], fixed=TRUE)){
+#       # add female to the column name
+#       # print()
+#       tmp_name <- paste(newColNames[ii-1], "male", sep = "_")
+#     } else{
+#       tmp_name <- paste(newColNames[ii-2], "female", sep = "_")
+#     }
+#     print(tmp_name)
+#     newColNames2[ii] <- tmp_name
+#   }else{
+#     newColNames2[ii] <- newColNames[ii]
+#   }
+# }
+# 
+# colnames(df_tmp) <- newColNames2
+# 
+# df_census7_geo <- df_tmp %>%
+#   dplyr::filter(!is.na(Regions)) %>%
+#   dplyr::mutate(Regions = stringr::str_squish(Regions),
+#                 Regions_EN = Reg_Name_EN) %>%
+#   dplyr::rename(Regions_CN=Regions)
 
-# save(df_census7_edu, dat_cn, file = here::here("Re_Analysis_CHN.RData"))
+# save(df_census7_edu, dat_cn, df_census7_geo, file = here::here("Re_Analysis_CHN.RData"))
+
 ```
 
 Total number of participants in China is `n = `r length(unique(dat_cn$ResponseId))``.
@@ -151,7 +198,7 @@ fig1a
 
 
 ### Age bins
-```{r H2b ageBins plot, message=FALSE, warning=FALSE}
+```{r fig1b ageBins, message=FALSE, warning=FALSE}
 #  
 dat_age_Ruggeri2022 <- dat_cn %>%
   dplyr::filter(!is.na(Age)) %>%
@@ -226,7 +273,7 @@ In Ruggeri et al. (2022), the edu data is: Primary ed., Secondary ed.,  Technica
 To make it comparable, we re-code both and used the following schema:
 "noschool", "primary", "secondary" (include both middle and high school), "Technical college", "Bachelor", "master" (include graduate and MBA), and "PhD".
 
-```{r plot edu}
+```{r fig1c Edu}
 df_edu_census7 <- df_census7_edu %>%
   dplyr::filter(Age >= 18) %>%
   dplyr::select(-ends_with("_all")) %>%
@@ -311,7 +358,7 @@ fig1c <- ggplot(data= df_edu_sum_census7_prop,
                 group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
   # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
   coord_flip() +
-  labs(y="Proportion", x = "Edu", color=NULL) + 
+  labs(y="Proportion", x = "Education attainments", color=NULL) + 
   annotate("text",label= "italic(Male)", x=7,y=-10, parse=TRUE,size=8, family = "serif") +
   annotate("text",label= "italic(Female)", x=7,y=10, parse=TRUE,size=8,family = "serif") +
   scale_color_manual(values = c("red","blue")) +
@@ -324,122 +371,285 @@ fig1c <- ggplot(data= df_edu_sum_census7_prop,
         axis.title = element_text(size = 16,family = "serif"),
         axis.text = element_text(size = 16,family = "serif"))
 
-fig1 <- fig1a + fig1b + fig1c + plot_annotation(tag_levels = 'A')
-ggsave("fig1_CHNData.pdf", fig1, device = "pdf", width=20, height = 9)
+# fig1 <- fig1a + fig1b + fig1c + plot_annotation(tag_levels = 'A')
+# ggsave("fig1_CHNData.pdf", fig1, device = "pdf", width=20, height = 9)
 
-fig1
+fig1c
 ```
 
 
 ### Geographical 
 
-```{r geographical distr}
-### the code was largely learnted from: https://github.com/liangliangzhuang/R_example
+After examining the proportion of data distribution, we have the following seven levels:
+* > 25%
+* 20% ~ 24.9%
+* 15% ~ 19.9%
+* 10% ~ 14.9%
+* 5% ~ 9.9%
+* 1% ~ 4.9%
+* < 1%
+```{r fig1d geo dist}
+df_census7_geo_adults <- df_census7_geo %>%
+  dplyr::select(Regions_CN, 17:ncol(.)) %>%
+  dplyr::select(Regions_CN, Regions_EN, everything()) %>%
+  dplyr::mutate_at(c(3:56), as.numeric) %>%
+  dplyr::filter(Regions_EN != "Whole_Country_Mainland") 
 
-### prepparing the map
+df_census7_geo_adults_all <- df_census7_geo_adults %>%
+  dplyr::select(-contains("male")) %>%
+  dplyr::mutate(N = rowSums(across(where(is.numeric)))) %>%
+  dplyr::select(Regions_CN, Regions_EN,N) %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 3) * 100) %>%
+  dplyr::mutate(PropBins = cut(Proportion,
+                              breaks=c(0, 1, 5, 10, 15, 20, 25, 30), 
+                              labels=c("< 0.9%", "1~4.9%", "5~9.9%", "10~14.9%", "15~19.9%",
+                                       "20~24.9%",">25%")),
+                PropBins = factor(PropBins, 
+                                 levels = c("< 0.9%", "1~4.9%", "5~9.9%", "10~14.9%", "15~19.9%",
+                                            "20~24.9%",">25%"))) %>%
+  dplyr::arrange(desc(Proportion))
+
+df_census7_geo_adults_female <- df_census7_geo_adults %>%
+  dplyr::select(Regions_CN, Regions_EN, contains("female")) %>%
+  dplyr::mutate(N_female = rowSums(across(where(is.numeric)))) %>%
+  dplyr::select(Regions_CN, Regions_EN, N_female) 
+
+df_census7_geo_adults_male <- df_census7_geo_adults %>%
+  dplyr::select(Regions_CN, Regions_EN, contains("_male")) %>%
+  dplyr::mutate(N_male = rowSums(across(where(is.numeric)))) %>%
+  dplyr::select(Regions_CN, Regions_EN, N_male) 
+
+df_census7_geo_adults_sex <- df_census7_geo_adults_female %>%
+  dplyr::left_join(., df_census7_geo_adults_male) %>%
+  tidyr::pivot_longer(c(N_female, N_male), names_to = "Sex", values_to = "N") %>%
+  dplyr::mutate(Sex = gsub("N_", "", Sex),
+                Sex = ifelse(Sex == "female", "Female", "Male"),
+                Proportion = round(N / sum(N), 3) * 100)  %>%
+  dplyr::mutate(Regions_EN = factor(Regions_EN,
+                                    levels = df_census7_geo_adults_all$Regions_EN))
+
+dat_cn_geo_sex <- dat_cn %>%
+  dplyr::rename(Regions_EN = REGION, Sex=Gender) %>%
+  dplyr::filter(Sex == "Female" | Sex=="Male") %>%
+  dplyr::group_by(Regions_EN, Sex) %>%
+  dplyr::summarise(N = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(!is.na(Regions_EN)) %>%
+  dplyr::filter(Regions_EN != "Other") %>%
+  dplyr::arrange(N) %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 3) * 100,
+                Regions_EN = factor(Regions_EN,
+                                    levels = df_census7_geo_adults_all$Regions_EN)) 
+
+
+fig1d <- ggplot(data= df_census7_geo_adults_sex, 
+                aes(x=Regions_EN, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
+  geom_col(alpha=0.5, width = 1) +
+  geom_line(data = dat_cn_geo_sex, 
+            aes(x=Regions_EN,
+                y = ifelse(Sex == "Male", -Proportion, Proportion),
+                group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+  # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
+  coord_flip() +
+  labs(y="Proportion", x = "Provinces (China Mainland)", color=NULL) + 
+  annotate("text",label= "italic(Male)", x=30,y=-3, parse=TRUE,size=8, family = "serif") +
+  annotate("text",label= "italic(Female)", x=30,y=3, parse=TRUE,size=8,family = "serif") +
+  scale_color_manual(values = c("red","blue")) +
+  theme_classic() +
+  theme(panel.border =element_rect(fill=NA,color="black"),
+        legend.position ="bottom",
+        legend.box.spacing = unit(2,"pt"),
+        legend.text = element_text(size = 16, family = "serif"),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 16,family = "serif"),
+        axis.text = element_text(size = 16,family = "serif"))
+
+fig1 <- fig1a + fig1c + fig1b  + fig1d + plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1,1.3))
+
+ggsave("fig1_CHNData.pdf", fig1, device = "pdf", width=15, height = 20)
+
+fig1
+```
+
+
+```{r fig2 geo dist spatial}
+# count the number of participants in each province
+
+dat_cn_geo <- dat_cn %>%
+  dplyr::group_by(REGION) %>%
+  dplyr::summarise(N = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(!is.na(REGION)) %>%
+  dplyr::arrange(N) %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 3) * 100) %>%
+  dplyr::mutate(PropBins = cut(Proportion,
+                              breaks=c(0, 1, 5, 10, 15, 20, 25, 30), 
+                              labels=c("< 0.9%", "1~4.9%", "5~9.9%", "10~14.9%", "15~19.9%",
+                                       "20~24.9%",">25%")),
+                PropBins = factor(PropBins, 
+                                 levels = c("< 0.9%", "1~4.9%", "5~9.9%", "10~14.9%", "15~19.9%",
+                                            "20~24.9%",">25%"))) 
+  
+### the code was largely learnt from: https://github.com/liangliangzhuang/R_example
+
+### preparing the map
 pacman::p_load(geojsonsf, RColorBrewer, rgdal, ggplot2, maptools, mapproj, ggsn, ggspatial, readxl, sf, cowplot)
 
 API_pre = "http://xzqh.mca.gov.cn/data/" # get map data from website
 ChinaMap = st_read(dsn = paste0(API_pre, "quanguo.json"), stringsAsFactors=FALSE) 
 sf::st_crs(ChinaMap) <- 4326 # use coordinates 4326
 
-# save(ChinaMap, file = "./CHNMap/China_Map.RData")
-# load("./CHNMap/China_Map.RData")
-
 China_border_line <- sf::st_read(dsn = paste0(API_pre, "quanguo_Line.geojson"), stringsAsFactors=FALSE) # read border line of the country
 sf::st_crs(China_border_line) = 4326
+border_line_CN <- China_border_line[China_border_line$QUHUADAIMA == "guojiexian",]  ## 选择区划代码为国界线的区域
 
-gjx <- China_border_line[China_border_line$QUHUADAIMA == "guojiexian",]  ## 选择区划代码为国界线的区域
-
-# 读取省份经纬度
-province <- read.csv("CHNMap/province3.csv")
-
-fig2a <-  ggplot() +
-   geom_sf(data = ChinaMap, fill='NA') +    # 绘制主图
-   geom_sf(data = gjx) +                # 绘制国界线及十段线
-   geom_text(data = province,aes(x=dili_Jd, y=dili_Wd,label=省市),  ##添加省份名称
-             position = "identity",
-             size=3,
-             check_overlap = TRUE) +
-   labs(title="Map of China")+
-   theme(plot.title = element_text(color="black", size=16, face="bold",vjust = 0.1,hjust = 0.5),
-                                        legend.title=element_blank(),
-                                        legend.position = c(0.2,0.2),
-                                        panel.grid=element_blank(),
-                                        panel.background=element_blank(),
-                                        axis.text=element_blank(),
-                                        axis.ticks=element_blank(),
-                                        axis.title=element_blank()
-                                      ) +
-  ##添加指北针，“style”参数可以更改样式
-  annotation_north_arrow(location='tl', which_north='false',
-                         style=north_arrow_orienteering())
-
-fig2a
-
-# 读入数据
-nine_lines = read_sf('CHNMap/Nanhai.geojson') 
-  
-# 绘制九段线小图
-fig2b <- ggplot() +
-  geom_sf(data = ChinaMap, fill='NA', size=0.5) + 
-  geom_sf(data = nine_lines, color='black', size=0.5)+
-  ##去掉主图的部分区域
-  coord_sf(ylim = c(-4028017,-1877844),xlim = c(117131.4,2115095),crs="+proj=laea +lat_0=40 +lon_0=104")+
-  theme(
-    aspect.ratio = 1.25, #调节长宽比
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    axis.title = element_blank(),
-    panel.grid = element_blank(),
-    panel.background = element_blank(),
-    panel.border = element_rect(fill=NA,color="grey10",linetype=1,size=0.5),
-    plot.margin=unit(c(0,0,0,0),"mm"))
-
-fig2b
-
-fig2 <- cowplot::ggdraw() +
-  cowplot::draw_plot(fig2a) +
-  cowplot::draw_plot(fig2b, x = 0.8, y = 0, width = 0.13, height = 0.39)
-
-fig2
-
-
-```
-
-
-```{r}
-colour <- read.csv("CHNMap/colour4.csv")
-head(colour)
+province <- read.csv("CHNMap/province3.csv") %>%   # get the province geo info
+  dplyr::rename(Regions_EN = 省市,                 # change colname to English in case of encoding error
+                capitalCity = 省会)
+colour <- read.csv("CHNMap/colour4.csv")       # get the file for colour
 
 colour$QUHUADAIMA <- as.character(colour$QUHUADAIMA)
-#colour$colour <- as.character(colour$colour)
-# colour$colour <- noquote(colour$colour)
 
-# colour$colour[c(28, 29,30)] <- c("1000+", "1000+", "1000+")
+colour$new_colour <- rep(0,nrow(colour))      # add a new column for psychol sample
+colour$new_colour_geo <- rep(0,nrow(colour))  # add a new column for census
 
-ChinaMap2 <- dplyr::left_join(ChinaMap,colour, by= "QUHUADAIMA")
+## assign value for colour based on psychol sample
+colour$new_colour[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "< 0.9%"]] <- 1
+colour$new_colour[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "1~4.9%"]] <- 2
+colour$new_colour[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "5~9.9%"]] <- 3
+colour$new_colour[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "10~14.9%"]] <- 4
+colour$new_colour[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "15~19.9%"]] <- 5
+colour$new_colour[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "20~24.9%"]] <- 6
+colour$new_colour[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == ">25%"]] <- 7
 
-fig2c <-  ggplot() +
+## assign value for colour based on census 7
+colour$new_colour_geo[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins == "< 0.9%"]] <- 1
+colour$new_colour_geo[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins == "1~4.9%"]] <- 2
+colour$new_colour_geo[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins =="5~9.9%"]] <- 3
+colour$new_colour_geo[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins =="10~14.9%"]] <- 4
+colour$new_colour_geo[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins =="15~19.9%"]] <- 5
+colour$new_colour_geo[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins == "20~24.9%"]] <- 6
+colour$new_colour_geo[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins == ">25%"]] <- 7
+
+colour <- colour %>%
+  dplyr::mutate(new_colour = factor(new_colour, 
+                                    levels = c("0","1", "2", "3", "4", "5", "6","7")),
+                new_colour_geo = factor(new_colour_geo, 
+                                    levels = c("0","1", "2", "3", "4", "5", "6","7")))
+
+ChinaMap2 <- dplyr::left_join(ChinaMap,colour,by= "QUHUADAIMA")
+# head(colour)
+```
+
+```{r}
+# check color spectrum
+# brewer.pal(n=9, name="Blues")
+# "#F7FBFF" "#DEEBF7" "#C6DBEF" "#9ECAE1" "#6BAED6" "#4292C6" "#2171B5" "#08519C" "#08306B"
+
+fig2a_1 <-  ggplot() +
+  geom_sf(data = ChinaMap2,
+          aes(fill = new_colour)) +
+  scale_fill_manual("class",
+                    values = c("#FFFFFF", "#C6DBEF","#9ECAE1","#6BAED6",
+                               "#4292C6", "#2171B5", "#08519C","#08306B"),
+                    breaks = c("0","1",   "2", "3", 
+                               "4", "5", "6","7"),
+                    labels = c("0",       "< 0.9%",    "1~4.9%", "5~9.9%", 
+                               "10~14.9%", "15~19.9%", "20~24.9%",">25%")
+      ) +
+      geom_sf(data = border_line_CN) +
+      geom_text(
+        data = province,
+        aes(x = dili_Jd, y = dili_Wd, label = Regions_EN),
+        position = "identity",
+        size = 3,
+        check_overlap = TRUE
+      ) +
+      labs(title = "Geographical distribution of participants from Ruggeri_2022") +
+      theme(
+        plot.title = element_text(
+          color = "black",
+          size = 16,
+          face = "bold",
+          vjust = 0.1,
+          hjust = 0.5
+        ),
+        legend.title = element_blank(),
+        legend.position =  c(1.1, 0.7), # position of legend
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_blank()
+      ) +
+  ## add north arrow, the style can be changed
+      annotation_north_arrow(
+        location = 'tl',
+        which_north = 'false',
+        style = north_arrow_fancy_orienteering()
+      )
+
+
+# load south China sea's data and plot
+nine_lines <- sf::read_sf('CHNMap/Nanhai.geojson') 
+nine_map <- ggplot() +
+   geom_sf(data = ChinaMap2, fill='NA', size=0.5) + 
+   geom_sf(data = nine_lines, color='black', size=0.5)+
+  ##去掉主图的部分区域
+   coord_sf(ylim = c(-4028017,-1877844),xlim = c(117131.4,2115095),crs="+proj=laea +lat_0=40 +lon_0=104")+
+   theme(
+     aspect.ratio = 1.25, #调节长宽比
+     axis.text = element_blank(),
+     axis.ticks = element_blank(),
+     axis.title = element_blank(),
+     panel.grid = element_blank(),
+     panel.background = element_blank(),
+     panel.border = element_rect(fill=NA,color="grey10",linetype=1,size=0.5),
+     plot.margin=unit(c(0,0,0,0),"mm"))
+ 
+# # 使用cowplot包将大图小图拼在一起
+# fig2a <- cowplot::ggdraw() +
+#    cowplot::draw_plot(fig2a_1) +
+#    cowplot::draw_plot(nine_map, x = 0.7, y = 0.085, width = 0.13, height = 0.39)
+
+# use patch work to insert figures
+fig2a <- fig2a_1 + inset_element(
+  nine_map,
+  left = 0.8,
+  bottom = 0.1,
+  right = 1,
+  top = 0.4
+) + plot_layout(tag_level = 'new')
+fig2a
+```
+
+
+```{r}
+fig2b_1 <-  ggplot() +
   geom_sf(
     data = ChinaMap2,
-    aes(fill = factor(colour))) +
+    aes(fill = new_colour_geo)) +
     ## 填色
-      scale_fill_manual(
-        "class",
-        values = c("#9CEED3", "#79CBC2", "#5EA9AC", "#4B8793", "#3C6777"),
-        breaks = c("0~200", "200~400", "400~600", "600~1000", ">1000"),
-        labels = c("0~200", "200~400", "400~600", "600~1000", ">1000")
+  scale_fill_manual(
+        # "class",
+        values = c("#FFFFFF", "#C6DBEF","#9ECAE1","#6BAED6",
+                    "#4292C6", "#2171B5", "#08519C","#08306B"),
+        breaks = c("0","1",   "2", "3", 
+                   "4", "5", "6","7"),
+        labels = c("0",       "< 0.9%",    "1~4.9%", "5~9.9%", 
+                   "10~14.9%", "15~19.9%", "20~24.9%",">25%"),
+        drop = FALSE  ## force to show all levels
       ) +
-      geom_sf(data = gjx) +
+      geom_sf(data = border_line_CN) +
       geom_text(
         data = province,
-        aes(x = dili_Jd, y = dili_Wd, label = 省市),
+        aes(x = dili_Jd, y = dili_Wd, label = Regions_EN), ##添加省份名称
         position = "identity",
         size = 3,
         check_overlap = TRUE
       ) +
-      labs(title = "Map of China") +
+      guides(fill="none") + 
+      labs(title = "Geographical distribution of population from census 7 of China (mainland)") +
       theme(
         plot.title = element_text(
           color = "black",
@@ -449,7 +659,7 @@ fig2c <-  ggplot() +
           hjust = 0.5
         ),
         legend.title = element_blank(),
-        legend.position = c(0.2, 0.2),
+        # legend.position =  c(1.1, 0.7), # position of legend
         panel.grid = element_blank(),
         panel.background = element_blank(),
         axis.text = element_blank(),
@@ -459,111 +669,20 @@ fig2c <-  ggplot() +
       annotation_north_arrow(
         location = 'tl',
         which_north = 'false',
-        style = north_arrow_orienteering()
+        style = north_arrow_fancy_orienteering()
       )
 
+# use patch work to insert figures
+fig2b <- fig2b_1 + inset_element(
+  nine_map,
+  left = 0.8,
+  bottom = 0.1,
+  right = 1,
+  top = 0.4
+) + plot_layout(tag_level = 'new')
 
-# 读入九段线数据
-nine_lines = read_sf('CHNMap/Nanhai.geojson') 
-  
-# 绘制九段线小图
-nine_map <- ggplot() +
-   geom_sf(data = ChinaMap2,fill='NA', size=0.5) + 
-   geom_sf(data = nine_lines,color='black',size=0.5)+
-   coord_sf(ylim = c(-4028017,-1877844),xlim = c(117131.4,2115095),crs="+proj=laea +lat_0=40 +lon_0=104")+
-   theme(
-     aspect.ratio = 1.25, #调节长宽比
-     axis.text = element_blank(),
-     axis.ticks = element_blank(),
-     axis.title = element_blank(),
-     panel.grid = element_blank(),
-     panel.background = element_blank(),
-     panel.border = element_rect(fill=NA,color="grey10",linetype=1,size=0.5),
-     plot.margin=unit(c(0,0,0,0),"mm"))
- 
-# 使用cowplot包将大图小图拼在一起
-fig <- cowplot::ggdraw() +
-   cowplot::draw_plot(fig2c) +
-   cowplot::draw_plot(nine_map, x = 0.8, y = 0, width = 0.13, height = 0.39)
-fig
-```
+fig2 <- (fig2b | fig2a) + plot_layout(guides = "keep") # + plot_annotation(tag_levels = c('A', '1'))
+fig2
 
-```{r}
-colour$new_colour <- rep(0,nrow(colour))
-##给目标省份赋予不同的数值
-colour$new_colour[which(colour$shengfen=="重庆")] <- 1
-colour$new_colour[which(colour$shengfen=="山西")] <- 2
-colour$new_colour[which(colour$shengfen=="新疆")] <- 3
-colour$new_colour[which(colour$shengfen=="内蒙古")] <- 4
-ChinaMap3 <- dplyr::left_join(ChinaMap,colour,by= "QUHUADAIMA")
-head(colour)
-```
-
-```{r}
-fig2d <-  ggplot() +
-  geom_sf(
-    data = ChinaMap3,
-    aes(fill = factor(new_colour))) +
-    ## 填色
-      scale_fill_manual(
-        "class",
-         values = c("#FFFFFF", "#79CBC2", "#5EA9AC", "#4B8793", "#3C6777"),
-        breaks = c("0", "1", "2", "3", "4"),
-        labels = c("0", "1", "2", "3", "4")
-      ) +
-      geom_sf(data = gjx) +
-      geom_text(
-        data = province,
-        aes(x = dili_Jd, y = dili_Wd, label = 省市),
-        position = "identity",
-        size = 3,
-        check_overlap = TRUE
-      ) +
-      labs(title = "Map of China") +
-      theme(
-        plot.title = element_text(
-          color = "black",
-          size = 16,
-          face = "bold",
-          vjust = 0.1,
-          hjust = 0.5
-        ),
-        legend.title = element_blank(),
-        legend.position = c(0.2, 0.2),
-        panel.grid = element_blank(),
-        panel.background = element_blank(),
-        axis.text = element_blank(),
-        axis.ticks = element_blank(),
-        axis.title = element_blank()
-      ) +
-      annotation_north_arrow(
-        location = 'tl',
-        which_north = 'false',
-        style = north_arrow_orienteering()
-      )
-
-
-# 读入九段线数据
-nine_lines = read_sf('CHNMap/Nanhai.geojson') 
-  
-# 绘制九段线小图
-nine_map <- ggplot() +
-   geom_sf(data = ChinaMap2,fill='NA', size=0.5) + 
-   geom_sf(data = nine_lines,color='black',size=0.5)+
-   coord_sf(ylim = c(-4028017,-1877844),xlim = c(117131.4,2115095),crs="+proj=laea +lat_0=40 +lon_0=104")+
-   theme(
-     aspect.ratio = 1.25, #调节长宽比
-     axis.text = element_blank(),
-     axis.ticks = element_blank(),
-     axis.title = element_blank(),
-     panel.grid = element_blank(),
-     panel.background = element_blank(),
-     panel.border = element_rect(fill=NA,color="grey10",linetype=1,size=0.5),
-     plot.margin=unit(c(0,0,0,0),"mm"))
- 
-# 使用cowplot包将大图小图拼在一起
-fig <- cowplot::ggdraw() +
-   cowplot::draw_plot(fig2d) +
-   cowplot::draw_plot(nine_map, x = 0.8, y = 0, width = 0.13, height = 0.39)
-fig
+ggsave("fig2_CHNData.pdf", fig2, device = "pdf", width=20, height = 15)
 ```
