@@ -32,6 +32,8 @@ CHN_Census.RData
 df_chinese_subj_rr_stage1.RData
 *.xls
 CHNMap/
+*.zip
+*WorldBank*
 
 
 ## unpublished manuscript

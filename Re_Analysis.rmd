@@ -10,10 +10,10 @@ Aim: Illustrate the representativeness of Chinese sample in Ruggeri et al (2022,
 
 ## Load data
 ```{r load data}
-rm(list = ls())
+# rm(list = ls())
 
 if (!require("pacman")) install.packages("pacman")             # install the package manager pacman
-pacman::p_load(tidyverse, easystats, patchwork, here, bruceR)
+pacman::p_load('tidyverse', 'easystats', 'patchwork', 'here', 'bruceR', "naijR")
 
 # Load pre-processed census data and data from Ruggeri et al 2022, not that the largest age means >= that value
 load(here::here("Re_Analysis_CHN.RData"))
@@ -143,7 +143,7 @@ Total number of participants in China is `n = `r length(unique(dat_cn$ResponseId
 
 Note that here we used only "female" and "male" to quickly check the data.
 
-```{r Sex and Age, message=FALSE, warning=FALSE}
+```{r CHN Sex and Age, message=FALSE, warning=FALSE}
 df_census7_adults <- df_census7_edu %>%
   dplyr::filter(Age >= 18)
 
@@ -709,4 +709,272 @@ fig2 <- (fig2b | fig2a) + plot_layout(guides = "keep") # + plot_annotation(tag_l
 fig2
 
 ggsave("fig2_CHNData.pdf", fig2, device = "pdf", width=20, height = 15)
+```
+
+
+```{r Nigeria data}
+## data source
+# http://nigeria-education.org/data
+# https://data.un.org/default.aspx
+# most recent data:
+# https://dhsprogram.com/methodology/survey/survey-display-528.cfm
+
+# https://en.wikipedia.org/wiki/Demographics_of_Nigeria
+
+df_world_1 <- read_csv('Data_extracte_WorldBankData_Series_Data.csv')
+df_world_2 <- read_csv('Data_extracte_WorldBankData_Series_Metadata.csv')
+  
+str(df_world_1)
+str(df_world_2)
+  
+df_ng_2021 <- df_world_1 %>%
+  dplyr::filter(`Country Name` == "Nigeria") %>%
+  dplyr::select(1,3, 4, 9) %>%
+  dplyr::rename("YR2021" = `2021 [YR2021]`) %>%
+  dplyr::mutate(YR2021_num = as.numeric(YR2021)) %>%
+  dplyr::filter(!is.na(YR2021_num)) 
+
+df_ng_2021_age <- df_ng_2021 %>%
+  dplyr::filter(str_detect(`Series Name`,"%")) %>%
+  dplyr::filter(str_detect(`Series Name`,"ages")) %>%
+  dplyr::mutate(Agebins = str_replace(`Series Name`, "Population ages ", "")) %>%
+  dplyr::mutate(Agebins = str_replace(Agebins, " and above", "-120")) %>%
+  dplyr::filter(str_detect(Agebins, "male")) %>%
+  tidyr::separate(., col = Agebins, into = c("age", "sex", "note"), sep = ",|\\(") %>%
+  dplyr::mutate(sex = str_replace_all(sex, "\\s", "")) %>% # remove all white space
+  dplyr::mutate(note = str_replace(note, "\\)", "")) %>%
+  dplyr::mutate(Percent = YR2021_num/100)
+
+df_ng_2021_pop <-  df_ng_2021 %>%
+  dplyr::filter(!str_detect(`Series Name`,"%|\\(|-|\\d")) %>%
+  dplyr::mutate(Cat = str_replace(`Series Name`, "Population, | population|,|Population in ", "")) %>%
+  dplyr::mutate(Cat = str_replace(Cat, "largest city", "largest_city")) %>%
+  dplyr::select(YR2021_num, Cat) %>%
+  tidyr::pivot_wider(names_from = Cat, values_from = YR2021_num)
+
+Age_bins_ng_all <- c("00-04", "05-09", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", 
+                 "50-54", "55-59", "60-64", "65-69", "70-74", "75-79","80-120")
+
+Age_bins_ng_val <- c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", 
+                 "50-54", "55-59", "60-64", "65-69", "70-74", "75-79","80-120")
+
+Age_bins_ng_final <- c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", 
+                       "50-54", "55-59", "60-64", ">=65")
+
+df_ng_2021_age_final <- df_ng_2021_age %>%
+  dplyr::mutate(sex = str_replace_all(sex, "\\s", "")) %>%
+  dplyr::mutate(Pop = ifelse(sex == "female", 
+                             round(Percent * df_ng_2021_pop$female, 0),
+                             round(Percent * df_ng_2021_pop$male,0)),
+                Pop_percent = Pop/df_ng_2021_pop$total) %>%
+  dplyr::filter(age %in% Age_bins_ng_val) %>%
+  dplyr::select(2,3,6,7, 11, 10, 1) %>%
+  dplyr::mutate(ageBins = age) %>%
+  dplyr::arrange(ageBins, sex) %>%
+  dplyr::rename(Sex = sex,
+                Proportion = Pop_percent) %>%
+  dplyr::mutate(Proportion = Proportion * 100,
+                Sex = ifelse(Sex == "male", "Male", "Female")) %>%
+  dplyr::select(ageBins, Sex, Proportion)
+
+df_ng_2021_age_final_1 <- df_ng_2021_age_final %>%
+  dplyr::filter(ageBins %in% Age_bins_ng_val[1:10])
+
+df_ng_2021_age_final_2 <- df_ng_2021_age_final %>%
+  dplyr::filter(ageBins %in% Age_bins_ng_val[11:14]) %>%
+  dplyr::group_by(Sex) %>%
+  dplyr::summarise(n_prop = sum(Proportion)) %>%
+  dplyr::ungroup() %>%
+  dplyr::rename(Proportion = n_prop) %>%
+  dplyr::mutate(ageBins = ">=65") %>%
+  dplyr::bind_rows(., df_ng_2021_age_final_1) %>%
+  dplyr::mutate(ageBins = factor(ageBins, 
+                                 levels = Age_bins_ng_final)) %>%
+  dplyr::arrange(ageBins)
+  
+
+dat_ruggeri_ng <- dat_unique %>%
+  dplyr::filter(Residence == "Nigeria") %>%
+  dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" ) %>%
+  dplyr::filter(Gender == "Female" | Gender == "Male")
+
+dat_ruggeri_ng_age <- dat_ruggeri_ng %>%
+  dplyr::filter(!is.na(Age)) %>%
+    dplyr::mutate(ageBins = cut(Age, 
+                                  breaks=c(15, 20, 25, 30, 35, 40, 45,
+                                           50, 55, 60, 65, Inf), 
+                                  labels=Age_bins_ng_final),
+                ageBins = factor(ageBins, 
+                                     levels =Age_bins_ng_final)) %>%
+  dplyr::mutate(Sex = as.character(Gender)) %>%
+  dplyr::count(ageBins, Sex) %>%
+  dplyr::mutate(Proportion = round(n / sum(n), 4) * 100) %>%
+  tidyr::complete(ageBins, Sex, fill=list(Proportion=0)) %>%
+  dplyr::mutate(Site = "Ruggeri_etal_2022")
+  
+ggplot(data = df_ng_2021_age_final_2, 
+       aes(x=ageBins, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
+  geom_col(alpha=0.5, width = 1) +
+  geom_line(data = dat_ruggeri_ng_age, aes(x=ageBins,
+                                      y = ifelse(Sex == "Male", -Proportion, Proportion),
+                                      group=Sex,color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+  scale_y_continuous(limits = c(-21, 21)) +
+  coord_flip() +
+  labs(y="Proportion", x = "Age bins", color=NULL)+
+  annotate("text",label= "italic(Male)", x=10,y=-3, parse=TRUE,size=8, family = "serif") +
+  annotate("text",label= "italic(Female)", x=10,y=4, parse=TRUE,size=8,family = "serif") +
+  scale_color_manual(values = c("red","blue"))+
+  theme_classic()+
+  theme(panel.border =element_rect(fill=NA,color="black"),
+        legend.position ="bottom",
+        legend.box.spacing = unit(2,"pt"),
+        legend.text = element_text(size = 16, family = "serif"),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 16,family = "serif"),
+        axis.text = element_text(size = 16,family = "serif"))
+
+```
+
+
+```{r Nigeria Map}
+
+
+# copied from https://en.wikipedia.org/wiki/List_of_Nigerian_states_by_population#cite_note-2
+# ng_data <- read_clip_tbl()
+# 
+# ng_data <- ng_data %>%
+#   dplyr::rename(Orders = 1)
+# 
+# ng_data <- ng_data %>%
+#   dplyr::rename(Pop_2006 = 3,
+#                 Pop_2019 = 4)
+# 
+# ng_data_new <- ng_data %>%
+#   dplyr::mutate(State = str_remove(State, " State"),
+#                 Orders = ifelse(Orders == "–", "37", Orders),
+#                 Pop_2019 = str_remove_all(Pop_2019, ",")) %>%
+#   dplyr::mutate(Pop_2019 = as.numeric(Pop_2019)) %>%
+#   dplyr::filter(State != "Nigeria") %>%
+#   dplyr::select(-Pop_2006) %>%
+#   dplyr::mutate(Proportion = round(Pop_2019 / sum(Pop_2019), 3) * 100)
+# 
+# write_csv(ng_data_new, "NG_pop_2019_wiki.csv", )
+
+df_ng_reg_2019 <- bruceR::import("NG_pop_2019_wiki.csv")
+  
+# extract Nigeria's data
+dat_ruggeri_ng <- dat_unique %>%
+  dplyr::filter(Residence == "Nigeria") %>%
+  dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" )
+
+dat_ng_Sex <- dat_ng %>%
+  dplyr::filter(Gender == "Female" | Gender == "Male") %>%
+  dplyr::count(Gender) %>%
+  dplyr::mutate(Proportion = round(n / sum(n), 2) * 100,
+                Site = "Ruggeri_2022") %>%
+  dplyr::select(Site, Gender, Proportion) %>%
+  dplyr::rename(Sex = Gender)
+
+df_pop_ng_sex <- ng_data %>%
+  dplyr::filter(states == "")
+  dplyr::select(pop_female, pop_male) %>%
+  dplyr::mutate_if(is.character, as.numeric) %>%
+  # dplyr::select(-Age) %>%
+  colSums() %>%
+  data.frame() %>%
+  dplyr::rename(N=".")
+
+df_census7_sex$Sex <- rownames(df_census7_sex)
+
+df_census7_sex <- df_census7_sex %>%
+  dplyr::mutate(Sex = ifelse(Sex == "pop_female", "Female", "Male"))
+  
+df_census7_sex <- df_census7_sex %>%
+  dplyr::mutate(Proportion = N/sum(N)) %>%
+  dplyr::mutate(Site = "Census7") %>%
+  dplyr::select(Site, Sex, Proportion) %>%
+  dplyr::mutate(Proportion = round(as.numeric(Proportion*100), 0))
+
+rownames(df_census7_sex) <- NULL
+
+df_sex_ratio <- rbind(dat_Sex, df_census7_sex)
+
+### get the data for Bayesian mutlinomial test as in JASP
+df_sex_ratio_jasp <- df_sex_ratio %>%
+  tidyr::pivot_wider(names_from = Site,
+                     values_from = Proportion)
+
+fig1a <- ggplot(df_sex_ratio, aes(Site, Proportion,fill=Sex)) +
+  geom_col() +
+  theme_classic()+
+  xlab("Data sources") +
+  theme(legend.position = "bottom",
+        legend.key.size = unit(20,"pt"),
+        legend.box.spacing = unit(4,"pt"),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 16, family = "serif"),
+        legend.text = element_text(size = 16, family = "serif"),
+        axis.text = element_text(size =16, family = "serif"))
+
+fig1a 
+
+df_ng_reg_2019 <- bruceR::import("NG_pop_2019_wiki.csv") %>%
+  dplyr::select(State, Proportion) %>%
+  dplyr::rename(state = State) %>%
+  dplyr::arrange(state)
+
+bb <- c(0, 0.001, 0.5, 5, 10, 20, 50, 100)
+color_val <- c("#FFFFFF","#9ECAE1","#6BAED6", # , "#C6DBEF"
+                               "#4292C6", "#2171B5", "#08519C","#08306B")
+
+map_ng(region = df_ng_reg_2019$state, x = df_ng_pop_2019$Proportion, breaks = bb, col = 'Blues', show.text = FALSE, leg.title = "Proportions (%)")
+
+
+df_ng_reg_Ruggeri2022 <- dat_ng %>%
+  dplyr::filter(!is.na(REGION)) %>%
+  dplyr::rename(state = REGION) %>%
+  dplyr::mutate(state = as.character(state),
+                state = ifelse(state == "Andamawa", "Adamawa", state)) %>% # correct two values that are not the name of states
+  dplyr::arrange(state)
+
+df_ng_reg_Ruggeri2022_prop <- df_ng_reg_Ruggeri2022 %>%
+  dplyr::group_by(state) %>%
+  dplyr::summarise(state_n = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(Proportion = round(state_n / sum(state_n), 3) * 100) %>%
+  dplyr::mutate(state = ifelse(state %in% naijR::states(), state, naijR::states()))
+
+df_tmp <- data.frame(state = naijR::states(),
+                     state_n = 0,
+                     Proportion = 0) %>%
+  dplyr::filter(!(state %in% df_ng_reg_Ruggeri2022_prop$state))
+
+df_ng_reg_Ruggeri2022_prop <- rbind(df_ng_reg_Ruggeri2022_prop, df_tmp) %>%
+  dplyr::arrange(state)
+
+
+map_ng(region = df_ng_reg_Ruggeri2022_prop$state, x = df_ng_reg_Ruggeri2022_prop$Proportion, breaks = bb, col = 'Blues', show.text = FALSE, leg.title = "Proportions (%)")
+
+ss <- states()
+numStates <- length(ss)
+vv <- sample(LETTERS[1:5], numStates, TRUE)
+
+# Create a data frame and view top rows
+dd <- data.frame(state = ss, letter = vv)
+head(dd)
+
+map_ng(data = dd)
+
+map_ng(region = states(), x = vv, col = "red", show.text = FALSE)
+
+nn <- runif(numStates, max = 100)  # random real numbers ranging from 0 - 100
+bb <- c(0, 40, 60, 100)
+
+p_reg_ng_ruggeri2022 <- map_ng(region = states(), x = nn, breaks = bb, col = 'YlOrRd', show.text = FALSE)
+
+library(patchwork)
+
+p_reg_ng <- (p_reg_ng_wiki2019 + p_reg_ng_ruggeri2022)
+
+ng_df <- readr::read_csv("nga_general_2020_csv.zip")
 ```
