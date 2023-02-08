@@ -13,7 +13,7 @@ Aim: Illustrate the representativeness of Chinese sample in Ruggeri et al (2022,
 # rm(list = ls())
 
 if (!require("pacman")) install.packages("pacman")             # install the package manager pacman
-pacman::p_load('tidyverse', 'easystats', 'patchwork', 'here', 'bruceR', "naijR")
+pacman::p_load('tidyverse', 'easystats', 'patchwork', 'here', 'bruceR', "naijR", "wbstats")
 
 # Load pre-processed census data and data from Ruggeri et al 2022, not that the largest age means >= that value
 load(here::here("Re_Analysis_CHN.RData"))
@@ -308,6 +308,7 @@ df_edu_sum_census7 <- df_edu_sum_census7 %>%
   dplyr::ungroup()
   
 # using standardized names for edu levels
+
 df_edu_sum_census7$Edu<- dplyr::recode(df_edu_sum_census7$Edu, 
                                        noSchool = "NoSchool",
                                        elementary = "Primary",
@@ -837,8 +838,6 @@ ggplot(data = df_ng_2021_age_final_2,
 
 
 ```{r Nigeria Map}
-
-
 # copied from https://en.wikipedia.org/wiki/List_of_Nigerian_states_by_population#cite_note-2
 # ng_data <- read_clip_tbl()
 # 
@@ -883,40 +882,6 @@ df_pop_ng_sex <- ng_data %>%
   colSums() %>%
   data.frame() %>%
   dplyr::rename(N=".")
-
-df_census7_sex$Sex <- rownames(df_census7_sex)
-
-df_census7_sex <- df_census7_sex %>%
-  dplyr::mutate(Sex = ifelse(Sex == "pop_female", "Female", "Male"))
-  
-df_census7_sex <- df_census7_sex %>%
-  dplyr::mutate(Proportion = N/sum(N)) %>%
-  dplyr::mutate(Site = "Census7") %>%
-  dplyr::select(Site, Sex, Proportion) %>%
-  dplyr::mutate(Proportion = round(as.numeric(Proportion*100), 0))
-
-rownames(df_census7_sex) <- NULL
-
-df_sex_ratio <- rbind(dat_Sex, df_census7_sex)
-
-### get the data for Bayesian mutlinomial test as in JASP
-df_sex_ratio_jasp <- df_sex_ratio %>%
-  tidyr::pivot_wider(names_from = Site,
-                     values_from = Proportion)
-
-fig1a <- ggplot(df_sex_ratio, aes(Site, Proportion,fill=Sex)) +
-  geom_col() +
-  theme_classic()+
-  xlab("Data sources") +
-  theme(legend.position = "bottom",
-        legend.key.size = unit(20,"pt"),
-        legend.box.spacing = unit(4,"pt"),
-        legend.title = element_blank(),
-        axis.title = element_text(size = 16, family = "serif"),
-        legend.text = element_text(size = 16, family = "serif"),
-        axis.text = element_text(size =16, family = "serif"))
-
-fig1a 
 
 df_ng_reg_2019 <- bruceR::import("NG_pop_2019_wiki.csv") %>%
   dplyr::select(State, Proportion) %>%
@@ -977,4 +942,212 @@ library(patchwork)
 p_reg_ng <- (p_reg_ng_wiki2019 + p_reg_ng_ruggeri2022)
 
 ng_df <- readr::read_csv("nga_general_2020_csv.zip")
+```
+
+```{r Nigeria edu}
+
+### tried to use data from world bank, but did not find useful information
+# ng_vars <- wb_search("^(?=.*education)(?=.*population)(?!.*25+).*", perl = TRUE)
+# 
+# indcators <- ng_vars %>%
+#   dplyr::filter(!str_detect(indicator_id, "HH.DHS.GAR.456|HH.DHS.NIR|HH.MICS.GAR|PRJ.ATT.2039.3|SE.PRE.NENR")) %>%
+#   dplyr::filter(!str_detect(indicator_id,"SI.POV|UIS.AIR|UIS.GGR|UIS.NAR|UIS.NER|UIS.NIR|UIS.SLEN|UIS.XGOVEXP"))
+# 
+# ng_vars_df <- wb_data(country = "NGA",
+#                       indicator = indcators$indicator_id,
+#                       # start_date = 2019, end_date = 2023,
+#                       mrv = 1, 
+#                       return_wide = FALSE
+#                       ) 
+# 
+# ng_vars_df_2 <- ng_vars_df %>%
+#   dplyr::select(where(~!all(is.na(.x)))) %>%
+#   dplyr::filter(!str_detect(indicator, "Labor force"))
+# 
+# ng_vars_Wittgenstein <- ng_vars_df_2 %>%
+#   dplyr::filter(str_detect(indicator, "Wittgenstein")) %>%
+#   dplyr::filter(!str_detect(indicator, "\\+|\\-|thousands")) %>%
+#   dplyr::select(where(~!all(is.na(.x)))) %>%
+#   dplyr::filter(str_detect(indicator, "Total")) 
+# 
+# ng_vars_UIS <- ng_vars_df_2 %>%
+#   dplyr::filter(str_detect(indicator_id, "UIS")) %>%
+#   dplyr::filter(!str_detect(indicator, "\\+|\\-|thousands")) %>%
+#   dplyr::select(where(~!all(is.na(.x)))) %>%
+#   dplyr::filter(str_detect(indicator, "Total")) 
+
+### using the data from DHS, page 44
+#  Women and men age 15-49
+## Nigeria's education,  6-3-3-4 system
+# primary: 5/6 ~ 11/12
+# Junior secondary: 11/12 ~ 14/15
+# Senior Secondary: 14/15 ~ 17/18
+# Tertiary institution (Uni, Polytech, MonoTech, College)
+# ng_edu_prop <- data.frame(female = c(35, 4, 10, 16, 23, 11),
+#                             male = c(22, 3, 11, 16, 32, 17),
+#                           educ = c("No_Edu", "Some_Primary", "Complted primary", "Some_secondary", 
+#                                    "Completed_secondary", "More_than_secondary"))
+
+ng_edu_prop <- data.frame(Female = c(35, 14, 16, 23, 12), # originally sum up to 99, randomly
+                          Male = c(22, 14, 16, 32, 16), # originally sum up to 101
+                          Edu = c("NoSchool", "Primary", "Some_secondary", 
+                                   "Completed_secondary", "Tertiary")) %>%
+  dplyr::mutate(Female = Female/2,
+                Male = Male/2) %>%
+  tidyr::pivot_longer(cols = Female:Male,names_to = "Sex", values_to = "Proportion") %>%
+  dplyr::mutate(Edu = factor(Edu, levels = c("NoSchool", "Primary", "Some_secondary", "Completed_secondary",
+                                        "Tertiary")))
+
+
+## Prepare data from Ruggeri et al (2022)
+dat_ng_edu <- dat_ng %>%
+  dplyr::group_by(Gender, EducationCompleted) %>%
+  dplyr::summarise(N_edu = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(!is.na(EducationCompleted))
+
+dat_ng_edu$Edu <- dplyr::recode(dat_ng_edu$EducationCompleted,
+                                Graduate = "Tertiary",
+                                MBA = "Tertiary",
+                                `Primary ed.` = "Primary",
+                                `Secondary ed.` = "Completed_secondary",
+                                `Technical ed.` = "Tertiary",
+                                `No formal ed.` = "NoSchool",
+                                Bachelor = "Tertiary",
+                                ) %>%
+  factor(., levels = c("NoSchool", "Primary", "Some_secondary", "Completed_secondary",
+                                        "Tertiary")) 
+  
+dat_ng_edu_prop <- dat_ng_edu %>%
+  # dplyr::select(-EducationCompleted) %>%
+  dplyr::filter(Gender == "Male" | Gender == "Female") %>%
+  dplyr::mutate(Gender = factor(Gender, levels = c("Female", "Male"))) %>%
+  dplyr::rename(Sex = Gender) %>%
+  dplyr::arrange(Sex, Edu) %>%
+  dplyr::group_by(Sex, Edu) %>%
+  dplyr::summarise(N_new = sum(N_edu)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(Proportion = round(N_new / sum(N_new), 4) * 100) %>%
+  tidyr::complete(Sex, Edu,
+                  fill = list(Proportion =0))
+
+ggplot(data= ng_edu_prop, 
+       aes(x=Edu, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
+  geom_col(alpha=0.5, width = 1) +
+  geom_line(data = dat_ng_edu_prop, 
+            aes(x=Edu,
+                y = ifelse(Sex == "Male", -Proportion, Proportion),
+                group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+  # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
+  coord_flip() +
+  labs(y="Proportion", x = "Education attainments", color=NULL) + 
+  annotate("text",label= "italic(Male)", x=5,y=-20, parse=TRUE,size=8, family = "serif") +
+  annotate("text",label= "italic(Female)", x=5,y=20, parse=TRUE,size=8,family = "serif") +
+  scale_color_manual(values = c("red","blue")) +
+  theme_classic() +
+  theme(panel.border =element_rect(fill=NA,color="black"),
+        legend.position ="bottom",
+        legend.box.spacing = unit(2,"pt"),
+        legend.text = element_text(size = 16, family = "serif"),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 16,family = "serif"),
+        axis.text = element_text(size = 16,family = "serif"))
+```
+
+```{r US data}
+pacman::p_load("tidyverse", "tidycensus")
+dat_ruggeri_us <- dat_unique %>%
+  dplyr::filter(Residence == "United_States") %>%
+  dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" ) %>%
+  dplyr::filter(Gender == "Female" | Gender == "Male")
+
+# # install the api key and activate it
+# census_api_key("321ed99e90327e7474975d8e95427fcc69bb2bba", install = TRUE)
+# readRenviron("~/.Renviron")
+# 
+# df_census_us <- tidycensus::get_decennial(
+#   geography = "state",
+#   year = 2020,
+#   sumfile = "pl"
+#   
+# )
+## data downloaded from: https://data.census.gov
+df_census_us_states <- bruceR::import("DECENNIALPL2020.P1-2023-02-08T080125.csv")
+
+df_census_us_age <- bruceR::import("ACSST5Y2021.S0101-2023-02-08T075713.csv") %>%
+  dplyr::select(`Label (Grouping)`, contains("Estimate"))
+
+names <- c("ageBins", "Total", "Total_prop", "Male", "Male_prop", "Female", "Female_prop")
+colnames(df_census_us_age) <- names
+
+df_census_us_age <- df_census_us_age %>%
+  dplyr::select("ageBins", "Total", "Male", "Female") %>%
+  dplyr::mutate(Total = as.integer(gsub(",", "", as.character(.$Total))),
+                #Total_prop = as.numeric(gsub("%", "", as.character(.$Total_prop))),
+                Male = as.integer(gsub(",", "", as.character(.$Male))),
+                #Male_prop = as.numeric(gsub("%", "", as.character(.$Male_prop))),
+                Female = as.integer(gsub(",", "", as.character(.$Female))),
+                #Female_prop = as.numeric(gsub("%", "", as.character(.$Female_prop))),
+                ) 
+## sex ratio
+df_census_us_sex <- df_census_us_age %>%
+  dplyr::slice(1) %>%
+  dplyr::mutate(Male = round(100*Male/Total, 1),
+                Female = round(100*Female/Total, 1)) %>%
+  dplyr::select(-Total) %>%
+  tidyr::pivot_longer(cols = Male:Female,
+                      names_to = "Sex",
+                      values_to = "Proportion")
+
+## age bins
+df_census_us_age_all <- df_census_us_age %>%
+  dplyr::slice(3:15, 32) %>%
+  dplyr::mutate(Male = round(100*Male/sum(Total), 1),
+                Female = round(100*Female/sum(Total), 1)) %>%
+  dplyr::slice(4:14) %>%
+  dplyr::mutate(ageBins = Age_bins_ng_final,
+                ageBins = factor(ageBins, levels = Age_bins_ng_final)) %>%
+  dplyr::select(ageBins,Male,Female) %>%
+  tidyr::pivot_longer(cols = Male:Female, 
+                      names_to = 'Sex',
+                      values_to = "Proportion")
+
+dat_ruggeri_us_age <- dat_ruggeri_us %>%
+  dplyr::filter(!is.na(Age)) %>%
+    dplyr::mutate(ageBins = cut(Age, 
+                                  breaks=c(15, 20, 25, 30, 35, 40, 45,
+                                           50, 55, 60, 65, Inf), 
+                                  labels=Age_bins_ng_final),
+                ageBins = factor(ageBins, 
+                                     levels =Age_bins_ng_final)) %>%
+  dplyr::mutate(Sex = as.character(Gender)) %>%
+  dplyr::count(ageBins, Sex) %>%
+  dplyr::mutate(Proportion = round(n / sum(n), 4) * 100) %>%
+  tidyr::complete(ageBins, Sex, fill=list(Proportion=0)) %>%
+  dplyr::mutate(Site = "Ruggeri_etal_2022")
+  
+ggplot(data = df_census_us_age_all, 
+       aes(x=ageBins, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
+  geom_col(alpha=0.5, width = 1) +
+  geom_line(data = dat_ruggeri_us_age, aes(x=ageBins,
+                                      y = ifelse(Sex == "Male", -Proportion, Proportion),
+                                      group=Sex,color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+  scale_y_continuous(limits = c(-15, 15)) +
+  coord_flip() +
+  labs(y="Proportion", x = "Age bins", color=NULL)+
+  annotate("text",label= "italic(Male)", x=10,y=-5, parse=TRUE,size=8, family = "serif") +
+  annotate("text",label= "italic(Female)", x=10,y=6, parse=TRUE,size=8,family = "serif") +
+  scale_color_manual(values = c("red","blue"))+
+  theme_classic()+
+  theme(panel.border =element_rect(fill=NA,color="black"),
+        legend.position ="bottom",
+        legend.box.spacing = unit(2,"pt"),
+        legend.text = element_text(size = 16, family = "serif"),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 16,family = "serif"),
+        axis.text = element_text(size = 16,family = "serif"))
+
+### education
+df_census_us_edu <- bruceR::import("ACSST5Y2021.S1501-2023-02-08T080006.csv")
+
 ```
