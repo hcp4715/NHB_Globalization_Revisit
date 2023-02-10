@@ -6,36 +6,19 @@ author: "Hu Chuan-Peng"
 
 This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook for re-analyzing the sample in paper [The globalizability of temporal discounting](https://www.nature.com/articles/s41562-022-01392-w). 
 
-Aim: Illustrate the representativeness of Chinese sample in Ruggeri et al (2022, NHB) in terms of gender, age, educational attainment, and geographical distribution. 
+Aim: Illustrate the representativeness of samples from US, China, and Nigeria in [Ruggeri et al (2022, NHB)](https://www.nature.com/articles/s41562-022-01392-w) in terms of gender, age, educational attainment, and geographical distribution. 
 
-## Load data
-```{r load data}
+# Chinese sample 
+
+```{r load libraries}
 # rm(list = ls())
 
 if (!require("pacman")) install.packages("pacman")             # install the package manager pacman
-pacman::p_load('tidyverse', 'easystats', 'patchwork', 'here', 'bruceR', "naijR", "wbstats")
-
-# Load pre-processed census data and data from Ruggeri et al 2022, not that the largest age means >= that value
-load(here::here("Re_Analysis_CHN.RData"))
-# load(here::here("1_2_data_files.RData"))
-
-# library(tidyverse)
-# library(easystats)
-# library(patchwork)
-
-# source(here::here("Functions.r"))
+pacman::p_load('tidyverse', 'easystats', 'patchwork', 'here', 'bruceR', "naijR", "tidycensus")
 ```
 
-# Sample representativeness: Taking the Chinese participants as an example
-
-Here we compare the Chinese participants' data with the census data in the following dimensions:
-
-* Sex and age
-* Educational attainment
-* Geographical distribution
-
 ## Preprocessing
-We extracted data from Ruggeri et al (2022). Based on the description from the pre-registration, we only selected adults data (>=18 yrs old) from census data.
+We extracted data from Ruggeri et al (2022). Based on the description from the pre-registration, we selected adults data (>=18 yrs old) from Chinese census data.
 
 Excerpt from pre-registration (https://osf.io/jfvh4): *Adult participants from 18 years of age and up (in some countries, 19 or 21 is the minimum age to participate in research) will be recruited from 65 countries, covering 41 languages.*
 
@@ -71,20 +54,22 @@ Here is the description of the participant in the paper:
 # save(df_census7_age, df_census7_edu, file = here::here("CHN_Census.RData"))
 
 # extract the Chinese from Ruggeri et al (2022)
-# dat_cn <- dat_unique %>%  
-#   dplyr::filter(Residence == "China") %>%
-#   dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" )
 
+df_cn_ruggeri2022 <- dat_unique %>%
+  dplyr::filter(Residence == "China") %>%
+  dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" )
+# 
 # # clean the census data (age & sex)
 # df_census7_age<- df_census7_age %>%
-#   dplyr::select(c(1, 3, 4)) %>%        
+#   dplyr::select(c(1, 3, 4)) %>%
 #   # dplyr::slice(c(9:13, 16:20, 23:27, 141:145)) %>%
-#   dplyr::rename(Age=1, 
+#   dplyr::rename(Age=1,
 #                 Male = 2,
 #                 Female=3) %>%
 #   dplyr::mutate(Age = ifelse(Age == "100岁及以上", 100, Age)) %>% # convert >=100 to 100
 #   dplyr::mutate(Age = as.numeric(Age)) %>%
-#   dplyr::filter(!is.na(Age)) 
+#   dplyr::filter(!is.na(Age))
+
 # 
 # Reg_Name_EN <- c("Whole_Country_Mainland", "Beijing", "Tianjin", "Hebei", "Shanxi", "Inner Mongolia", "Liaoning",
 #                  "Jilin", "Heilongjiang", "Shanghai", "Jiangsu", "Zhejiang", "Anhui", "Fujian", "Jiangxi", "Shandong",
@@ -134,20 +119,24 @@ Here is the description of the participant in the paper:
 
 # save(df_census7_edu, dat_cn, df_census7_geo, file = here::here("Re_Analysis_CHN.RData"))
 # save.image(file =  here::here("Re_Analysis_CHN.RData"))
+# df_cn_census <- df_cn_census_edu
+# df_cn_ruggeri2022 <- dat_cn
+# df_cn_census_geo <- df_census7_geo
+save(df_cn_census, df_cn_census_geo, file = here::here("Re_Analysis_CHN.RData"))
 
+# Load pre-processed census data and data from Ruggeri et al 2022, not that the largest age means >= that value
+load(here::here("Re_Analysis_CHN.RData"))
 ```
 
-Total number of participants in China is `n = `r length(unique(dat_cn$ResponseId))``.
+Total number of participants in China is n = `r length(unique(df_cn_ruggeri2022$ResponseId))`.
 
-## Sex & Ago (pyramids plots)
+## Sex & Age (pyramids plots)
 
 Note that here we used only "female" and "male" to quickly check the data.
 
 ```{r CHN Sex and Age, message=FALSE, warning=FALSE}
-df_census7_adults <- df_census7_edu %>%
-  dplyr::filter(Age >= 18)
 
-dat_Sex <- dat_cn %>%
+df_cn_ruggeri2022_sex <- df_cn_ruggeri2022 %>%
   dplyr::filter(Gender == "Female" | Gender == "Male") %>%
   dplyr::count(Gender) %>%
   dplyr::mutate(Proportion = round(n / sum(n), 2) * 100,
@@ -155,35 +144,29 @@ dat_Sex <- dat_cn %>%
   dplyr::select(Site, Gender, Proportion) %>%
   dplyr::rename(Sex = Gender)
 
-df_census7_sex <- df_census7_adults %>%
+df_cn_census_sex <- df_cn_census %>%
+  dplyr::filter(Age >= 18) %>%
   dplyr::select(pop_female, pop_male) %>%
   dplyr::mutate_if(is.character, as.numeric) %>%
-  # dplyr::select(-Age) %>%
   colSums() %>%
   data.frame() %>%
-  dplyr::rename(N=".")
-
-df_census7_sex$Sex <- rownames(df_census7_sex)
-
-df_census7_sex <- df_census7_sex %>%
-  dplyr::mutate(Sex = ifelse(Sex == "pop_female", "Female", "Male"))
-  
-df_census7_sex <- df_census7_sex %>%
+  dplyr::rename(N=".") %>%
+  dplyr::mutate(Sex = rownames(.)) %>%
+  dplyr::mutate(Sex = ifelse(Sex == "pop_female", "Female", "Male")) %>%
   dplyr::mutate(Proportion = N/sum(N)) %>%
   dplyr::mutate(Site = "Census7") %>%
   dplyr::select(Site, Sex, Proportion) %>%
-  dplyr::mutate(Proportion = round(as.numeric(Proportion*100), 0))
+  dplyr::mutate(Proportion = round(as.numeric(Proportion*100), 0)) %>%
+  `rownames<-` (NULL)
 
-rownames(df_census7_sex) <- NULL
+df_cn_sex_ratio <- rbind(df_cn_ruggeri2022_sex, df_cn_census_sex)
 
-df_sex_ratio <- rbind(dat_Sex, df_census7_sex)
+# ### get the data for Bayesian mutlinomial test as in JASP
+# df_cn_sex_ratio_jasp <- df_cn_sex_ratio %>%
+#   tidyr::pivot_wider(names_from = Site,
+#                      values_from = Proportion)
 
-### get the data for Bayesian mutlinomial test as in JASP
-df_sex_ratio_jasp <- df_sex_ratio %>%
-  tidyr::pivot_wider(names_from = Site,
-                     values_from = Proportion)
-
-fig1a <- ggplot(df_sex_ratio, aes(Site, Proportion,fill=Sex)) +
+fig1a <- ggplot(df_cn_sex_ratio, aes(Site, Proportion,fill=Sex)) +
   geom_col() +
   theme_classic()+
   xlab("Data sources") +
@@ -203,17 +186,17 @@ fig1a
 
 The age bins were tailored so it start with 17 years old.
 
-```{r fig1b ageBins, message=FALSE, warning=FALSE}
-dat_age_Ruggeri2022 <- dat_cn %>%
+```{r CN ageBins, message=FALSE, warning=FALSE}
+df_cn_ruggeri2022_age <- df_cn_ruggeri2022 %>%
   dplyr::filter(!is.na(Age)) %>%
   dplyr::mutate(ageBins_pyr = cut(Age, 
                                   breaks=c(17, 22, 27, 32, 37, 42, 47,
-                                           52, 57,62,67,72, 77, Inf), 
+                                           52, 57,62, 67, Inf), 
                                   labels=c("17~21", "22~26", "27~31", "32~36", "31~41", "42~46",
-                                           "47~51","52~56","57~61","62~66","67~71","72~76", ">=77")),
+                                           "47~51","52~56","57~61","62~66",">=67")),
                 ageBins_pyr = factor(ageBins_pyr, 
                                      levels = c("17~21", "22~26", "27~31", "32~36", "31~41", "42~46",
-                                                "47~51","52~56","57~61","62~66","67~71","72~76", ">=77"))) %>%
+                                                "47~51","52~56","57~61","62~66", ">=67"))) %>%
   dplyr::mutate(Sex = as.character(Gender)) %>%
   dplyr::filter(Sex == "Female" | Sex == "Male") %>%
   dplyr::count(ageBins_pyr, Sex) %>%
@@ -222,7 +205,8 @@ dat_age_Ruggeri2022 <- dat_cn %>%
   dplyr::mutate(Site = "Ruggeri_etal_2022",
                 Sex = ifelse(Sex == "Female", "female_R", "male_R"))
 
-df_age_census7 <- df_census7_adults %>%
+df_cn_census_age <- df_cn_census %>%
+  dplyr::filter(Age >= 18) %>%
   dplyr::select(Age, pop_female, pop_male) %>%
   dplyr::mutate_if(is.character, as.numeric) %>%
   dplyr::rename(Female = pop_female, Male=pop_male) %>%
@@ -231,12 +215,12 @@ df_age_census7 <- df_census7_adults %>%
                       values_to = "N") %>%
   dplyr::mutate(ageBins = cut(Age,
                               breaks=c(17, 22, 27, 32, 37, 42, 47,
-                                            52, 57,62,67,72, 77, Inf), 
-                            labels=c("17~21", "22~26", "27~31", "32~36", "31~41", "42~46",
-                                     "47~51","52~56","57~61","62~66","67~71","72~76", ">=77")),
+                                           52, 57,62, 67, Inf),
+                              labels=c("17~21", "22~26", "27~31", "32~36", "31~41", "42~46",
+                                           "47~51","52~56","57~61","62~66",">=67")),
                 ageBins = factor(ageBins, 
                                  levels = c("17~21", "22~26", "27~31", "32~36", "31~41", "42~46",
-                                            "47~51","52~56","57~61","62~66","67~71","72~76", ">=77"))) %>%
+                                           "47~51","52~56","57~61","62~66",">=67"))) %>%
   dplyr::group_by(Sex, ageBins) %>%
   dplyr::summarise(N_sum = sum(N)) %>%
   dplyr::ungroup() %>%
@@ -244,16 +228,16 @@ df_age_census7 <- df_census7_adults %>%
   tidyr::complete(ageBins, Sex, fill=list(Proportion=0))
 
 ### Plotting
-fig1b <- ggplot(data= df_age_census7, aes(x=ageBins, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
+fig1b <- ggplot(data= df_cn_census_age, aes(x=ageBins, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
   geom_col(alpha=0.5, width = 1) +
-  geom_line(data = dat_age_Ruggeri2022, aes(x=ageBins_pyr,
+  geom_line(data = df_cn_ruggeri2022_age, aes(x=ageBins_pyr,
                                       y = ifelse(Sex == "male_R", -Proportion, Proportion),
                                       group=Sex,color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
   # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
   coord_flip() +
   labs(y="Proportion", x = "Age bins", color=NULL)+
-  annotate("text",label= "italic(Male)", x=12,y=-3, parse=TRUE,size=8, family = "serif") +
-  annotate("text",label= "italic(Female)", x=12,y=4, parse=TRUE,size=8,family = "serif") +
+  annotate("text",label= "italic(Male)", x=10,y=-3, parse=TRUE,size=8, family = "serif") +
+  annotate("text",label= "italic(Female)", x=10,y=4, parse=TRUE,size=8,family = "serif") +
   scale_color_manual(values = c("red","blue"))+
   theme_classic()+
   theme(panel.border =element_rect(fill=NA,color="black"),
@@ -277,95 +261,71 @@ In Ruggeri et al. (2022), there are seven levels and `graduate` and `MBA` were t
 To make it comparable, we re-code both and used the following schema:
 "noschool", "primary", "secondary" (include both middle and high school), "Technical college", "Bachelor", "master" (include graduate and MBA), and "PhD".
 
-```{r fig1c Edu}
-df_edu_census7 <- df_census7_edu %>%
+```{r CN Edu}
+df_cn_census_edu <- df_cn_census %>%
   dplyr::filter(Age >= 18) %>%
   dplyr::select(-ends_with("_all")) %>%
   dplyr::select(-starts_with("pop_")) %>%
-  dplyr::mutate_if(is.character, as.numeric)
-
-## get the sum of all ages
-df_edu_sum_census7 <-  colSums(df_edu_census7[-1]) %>%
-  data.frame()
-
-# make row name as a column
-df_edu_sum_census7$Edu <- rownames(df_edu_sum_census7)
-rownames(df_edu_sum_census7) <- NULL
-
-# rename column and separate columns
-df_edu_sum_census7 <- df_edu_sum_census7 %>%
-  dplyr::rename("N" = ".") %>%
-  tidyr::separate(Edu, c("Edu", "Sex"))
-
-df_edu_sum_census7$Source <- "Census7"
-
-# recode the edu:
-df_edu_sum_census7 <- df_edu_sum_census7 %>%
-  dplyr::mutate(Edu = ifelse(Edu == "preSchool", "noSchool", 
-                             ifelse(Edu == "middle" | Edu == "high", "Secondary", Edu))) %>%
-  dplyr::group_by(Sex, Edu) %>%
-  dplyr::summarise(N_new = sum(N)) %>%
-  dplyr::ungroup()
-  
-# using standardized names for edu levels
-
-df_edu_sum_census7$Edu<- dplyr::recode(df_edu_sum_census7$Edu, 
-                                       noSchool = "NoSchool",
-                                       elementary = "Primary",
-                                       Secondary = "Secondary" ,
-                                       technical = "Technical" ,
-                                       university = "Bachelor",
-                                       master ="Master",
-                                       PhD = "PhD"
-                                       ) %>%
-  factor(., levels = c("NoSchool", "Primary", "Secondary",
-                       "Technical", "Bachelor", "Master", "PhD"))
-
-df_edu_sum_census7_prop <- df_edu_sum_census7 %>%
-  dplyr::mutate(Sex = ifelse(Sex == "female", "Female", "Male")) %>%
-  dplyr::arrange(Sex, Edu) %>%
+  dplyr::mutate_if(is.character, as.numeric) %>%
+  tidyr::pivot_longer(cols = noSchool_female: PhD_male,
+                      names_to = "Edu_Sex",
+                      values_to = "N") %>%
+  tidyr::separate(Edu_Sex, c("Edu", "Sex")) %>%
+  dplyr::group_by(Edu, Sex) %>%
+  summarise(N_pop = sum(N)) %>%
   dplyr::ungroup() %>%
-  dplyr::mutate(Proportion = round(N_new / sum(N_new), 4) * 100) 
+  dplyr::mutate(Edu = dplyr::case_when(Edu == "preSchool" | Edu == "noSchool" ~ "NoSchool",
+                                       Edu == "elementary" ~ "Primary",
+                                       Edu == "middle" | Edu == "high" ~ "Secondary",
+                                       Edu == "technical" ~ "Technical",
+                                       Edu == "university" ~ "Bachelor",
+                                       Edu == "master" | Edu == "PhD" ~ "Graduate",
+                                       TRUE ~ "Other"
+                                       ),
+                Edu = factor(Edu, levels = c("NoSchool", "Primary", "Secondary", "Technical",
+                                             "Bachelor", "Graduate")),
+                Sex = ifelse(Sex == "female", "Female", "Male"),
+                Sex = factor(Sex, levels = c("Female", "Male"))) %>%
+  dplyr::group_by(Sex, Edu) %>%
+  dplyr::summarise(N = sum(N_pop)) %>%
+  dplyr::ungroup()  %>%
+  tidyr::complete(Sex, Edu, fill = list(N=0)) %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 4) * 100) 
   
 ## Prepare data from Ruggeri et al (2022)
-dat_cn_edu <- dat_cn %>%
-  dplyr::group_by(Gender, EducationCompleted) %>%
-  dplyr::summarise(N_edu = n())
-
-dat_cn_edu$Edu <- dplyr::recode(dat_cn_edu$EducationCompleted,
-                                Graduate = "Master",
-                                MBA = "Master",
-                                `Primary ed.` = "Primary",
-                                `Secondary ed.` = "Secondary",
-                                `Technical ed.` = "Technical",
-                                `No formal ed.` = "NoSchool",
-                                ) %>%
-  factor(., levels = c("NoSchool", "Primary", "Secondary",
-                                        "Technical", "Bachelor", "Master", "PhD"))
-  
-dat_cn_edu_prop <- dat_cn_edu %>%
-  # dplyr::select(-EducationCompleted) %>%
-  dplyr::filter(Gender == "Male" | Gender == "Female") %>%
-  dplyr::mutate(Gender = factor(Gender, levels = c("Female", "Male"))) %>%
-  dplyr::rename(Sex = Gender) %>%
-  dplyr::arrange(Sex, Edu) %>%
+df_cn_ruggeri2022_edu <- df_cn_ruggeri2022 %>%
+  dplyr::rename(Edu = EducationCompleted,
+                Sex = Gender) %>%
+  dplyr::filter(Sex == "Male" | Sex == "Female") %>%
+  dplyr::mutate(Edu = dplyr::case_when(Edu == "preSchool" | Edu == "noSchool" ~ "NoSchool",
+                                       Edu == "Primary ed." ~ "Primary",
+                                       Edu == "Secondary ed." ~ "Secondary",
+                                       Edu == "Technical ed." ~ "Technical",
+                                       Edu == "Bachelor" ~ "Bachelor",
+                                       Edu == "Graduate" | Edu == "MBA" | Edu == "PhD" ~ "Graduate",
+                                           TRUE ~ "Other"
+                                       ),
+                Edu = factor(Edu, levels = c("NoSchool", "Primary", "Secondary", "Technical",
+                                             "Bachelor", "Graduate")),
+                Sex = factor(Sex, levels = c("Female", "Male"))) %>%
   dplyr::group_by(Sex, Edu) %>%
-  dplyr::summarise(N_new = sum(N_edu)) %>%
+  dplyr::summarise(N = n()) %>%
   dplyr::ungroup() %>%
-  dplyr::mutate(Proportion = round(N_new / sum(N_new), 4) * 100)
+  tidyr::complete(Sex, Edu, fill = list(N=0)) %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 4) * 100)
 
-fig1c <- ggplot(data= df_edu_sum_census7_prop, 
+fig1c <- ggplot(data= df_cn_census_edu, 
                 aes(x=Edu, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
   geom_col(alpha=0.5, width = 1) +
-  geom_line(data = dat_cn_edu_prop, 
+  geom_line(data = df_cn_ruggeri2022_edu, 
             aes(x=Edu,
                 y = ifelse(Sex == "Male", -Proportion, Proportion),
                 group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
   # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
   coord_flip() +
   labs(y="Proportion", x = "Education attainments", color=NULL) + 
-  annotate("text",label= "italic(Male)", x=7,y=-10, parse=TRUE,size=8, family = "serif") +
-  annotate("text",label= "italic(Female)", x=7,y=10, parse=TRUE,size=8,family = "serif") +
+  annotate("text",label= "italic(Male)", x=6,y=-11, parse=TRUE,size=8, family = "serif") +
+  annotate("text",label= "italic(Female)", x=6,y=11, parse=TRUE,size=8,family = "serif") +
   scale_color_manual(values = c("red","blue")) +
   theme_classic() +
   theme(panel.border =element_rect(fill=NA,color="black"),
@@ -397,7 +357,7 @@ After examining the proportion of data from each province, we have the following
 
 We used these levels to color the map.
 
-```{r fig1d geo dist}
+```{r CN geo dist}
 df_census7_geo_adults <- df_census7_geo %>%
   dplyr::select(Regions_CN, 17:ncol(.)) %>%
   dplyr::select(Regions_CN, Regions_EN, everything()) %>%
@@ -437,7 +397,7 @@ df_census7_geo_adults_sex <- df_census7_geo_adults_female %>%
   dplyr::mutate(Regions_EN = factor(Regions_EN,
                                     levels = df_census7_geo_adults_all$Regions_EN))
 
-dat_cn_geo_sex <- dat_cn %>%
+df_cn_ruggeri2022_geo_sex <- df_cn_ruggeri2022 %>%
   dplyr::rename(Regions_EN = REGION, Sex=Gender) %>%
   dplyr::filter(Sex == "Female" | Sex=="Male") %>%
   dplyr::group_by(Regions_EN, Sex) %>%
@@ -453,7 +413,7 @@ dat_cn_geo_sex <- dat_cn %>%
 fig1d <- ggplot(data= df_census7_geo_adults_sex, 
                 aes(x=Regions_EN, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
   geom_col(alpha=0.5, width = 1) +
-  geom_line(data = dat_cn_geo_sex, 
+  geom_line(data = df_cn_ruggeri2022_geo_sex, 
             aes(x=Regions_EN,
                 y = ifelse(Sex == "Male", -Proportion, Proportion),
                 group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
@@ -486,7 +446,7 @@ fig1
 pacman::p_load(geojsonsf, RColorBrewer, rgdal, ggplot2, maptools, mapproj, ggsn, ggspatial, readxl, sf, cowplot)
 
 # count the number of participants in each province
-dat_cn_geo <- dat_cn %>%
+df_cn_ruggeri2022_geo <- df_cn_ruggeri2022 %>%
   dplyr::group_by(REGION) %>%
   dplyr::summarise(N = n()) %>%
   dplyr::ungroup() %>%
@@ -526,13 +486,13 @@ colour <- colour %>%           # get the file for colour
                 colour_census = 0)                     # add a new column for census
 
 ## assign value for colour based on psychol sample
-colour$colour_psySample[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "< 0.9%"]] <- 1
-colour$colour_psySample[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "1~4.9%"]] <- 2
-colour$colour_psySample[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "5~9.9%"]] <- 3
-colour$colour_psySample[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "10~14.9%"]] <- 4
-colour$colour_psySample[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "15~19.9%"]] <- 5
-colour$colour_psySample[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == "20~24.9%"]] <- 6
-colour$colour_psySample[colour$province %in% dat_cn_geo$REGION[dat_cn_geo$PropBins == ">25%"]] <- 7
+colour$colour_psySample[colour$province %in% df_cn_ruggeri2022_geo$REGION[df_cn_ruggeri2022_geo$PropBins == "< 0.9%"]] <- 1
+colour$colour_psySample[colour$province %in% df_cn_ruggeri2022_geo$REGION[df_cn_ruggeri2022_geo$PropBins == "1~4.9%"]] <- 2
+colour$colour_psySample[colour$province %in% df_cn_ruggeri2022_geo$REGION[df_cn_ruggeri2022_geo$PropBins == "5~9.9%"]] <- 3
+colour$colour_psySample[colour$province %in% df_cn_ruggeri2022_geo$REGION[df_cn_ruggeri2022_geo$PropBins == "10~14.9%"]] <- 4
+colour$colour_psySample[colour$province %in% df_cn_ruggeri2022_geo$REGION[df_cn_ruggeri2022_geo$PropBins == "15~19.9%"]] <- 5
+colour$colour_psySample[colour$province %in% df_cn_ruggeri2022_geo$REGION[df_cn_ruggeri2022_geo$PropBins == "20~24.9%"]] <- 6
+colour$colour_psySample[colour$province %in% df_cn_ruggeri2022_geo$REGION[df_cn_ruggeri2022_geo$PropBins == ">25%"]] <- 7
 
 ## assign value for colour based on census 7
 colour$colour_census[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins == "< 0.9%"]] <- 1
@@ -1054,9 +1014,9 @@ ggplot(data= ng_edu_prop,
         axis.text = element_text(size = 16,family = "serif"))
 ```
 
-```{r US data}
+```{r US data Sex}
 pacman::p_load("tidyverse", "tidycensus")
-dat_ruggeri_us <- dat_unique %>%
+df_us_ruggeri2022 <- dat_unique %>%
   dplyr::filter(Residence == "United_States") %>%
   dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" ) %>%
   dplyr::filter(Gender == "Female" | Gender == "Male")
@@ -1072,15 +1032,13 @@ dat_ruggeri_us <- dat_unique %>%
 #   
 # )
 ## data downloaded from: https://data.census.gov
-df_census_us_states <- bruceR::import("DECENNIALPL2020.P1-2023-02-08T080125.csv")
-
-df_census_us_age <- bruceR::import("ACSST5Y2021.S0101-2023-02-08T075713.csv") %>%
+df_us_census_age <- bruceR::import("ACSST5Y2021.S0101-2023-02-08T075713.csv") %>%
   dplyr::select(`Label (Grouping)`, contains("Estimate"))
 
 names <- c("ageBins", "Total", "Total_prop", "Male", "Male_prop", "Female", "Female_prop")
-colnames(df_census_us_age) <- names
+colnames(df_us_census_age) <- names
 
-df_census_us_age <- df_census_us_age %>%
+df_us_census_age <- df_us_census_age %>%
   dplyr::select("ageBins", "Total", "Male", "Female") %>%
   dplyr::mutate(Total = as.integer(gsub(",", "", as.character(.$Total))),
                 #Total_prop = as.numeric(gsub("%", "", as.character(.$Total_prop))),
@@ -1090,17 +1048,44 @@ df_census_us_age <- df_census_us_age %>%
                 #Female_prop = as.numeric(gsub("%", "", as.character(.$Female_prop))),
                 ) 
 ## sex ratio
-df_census_us_sex <- df_census_us_age %>%
+df_us_census_sex <- df_us_census_age %>%
   dplyr::slice(1) %>%
   dplyr::mutate(Male = round(100*Male/Total, 1),
                 Female = round(100*Female/Total, 1)) %>%
   dplyr::select(-Total) %>%
   tidyr::pivot_longer(cols = Male:Female,
                       names_to = "Sex",
-                      values_to = "Proportion")
+                      values_to = "Proportion") %>%
+  dplyr::rename(Site = ageBins) %>%
+  dplyr::mutate(Site = "Census")
 
+df_us_ruggeri_sex <- df_us_ruggeri2022 %>%
+  dplyr::filter(Gender == "Female" | Gender == "Male") %>%
+  dplyr::count(Gender) %>%
+  dplyr::mutate(Proportion = round(n / sum(n), 2) * 100,
+                Site = "Ruggeri_2022") %>%
+  dplyr::select(Site, Gender, Proportion) %>%
+  dplyr::rename(Sex = Gender)
+
+df_us_sex_ratio <- rbind(df_us_census_sex, df_us_ruggeri_sex)
+
+ggplot(df_us_sex_ratio, aes(Site, Proportion,fill=Sex)) +
+  geom_col() +
+  theme_classic()+
+  coord_flip() +
+  xlab("Data sources") +
+  theme(legend.position = "bottom",
+        legend.key.size = unit(20,"pt"),
+        legend.box.spacing = unit(4,"pt"),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 16, family = "serif"),
+        legend.text = element_text(size = 16, family = "serif"),
+        axis.text = element_text(size =16, family = "serif"))
+```
+
+```{r US data age bins}
 ## age bins
-df_census_us_age_all <- df_census_us_age %>%
+df_us_census_age_all <- df_us_census_age %>%
   dplyr::slice(3:15, 32) %>%
   dplyr::mutate(Male = round(100*Male/sum(Total), 1),
                 Female = round(100*Female/sum(Total), 1)) %>%
@@ -1112,7 +1097,7 @@ df_census_us_age_all <- df_census_us_age %>%
                       names_to = 'Sex',
                       values_to = "Proportion")
 
-dat_ruggeri_us_age <- dat_ruggeri_us %>%
+df_us_ruggeri2022_age <- df_us_ruggeri2022 %>%
   dplyr::filter(!is.na(Age)) %>%
     dplyr::mutate(ageBins = cut(Age, 
                                   breaks=c(15, 20, 25, 30, 35, 40, 45,
@@ -1126,10 +1111,10 @@ dat_ruggeri_us_age <- dat_ruggeri_us %>%
   tidyr::complete(ageBins, Sex, fill=list(Proportion=0)) %>%
   dplyr::mutate(Site = "Ruggeri_etal_2022")
   
-ggplot(data = df_census_us_age_all, 
+ggplot(data = df_us_census_age_all, 
        aes(x=ageBins, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
   geom_col(alpha=0.5, width = 1) +
-  geom_line(data = dat_ruggeri_us_age, aes(x=ageBins,
+  geom_line(data = df_us_ruggeri2022_age, aes(x=ageBins,
                                       y = ifelse(Sex == "Male", -Proportion, Proportion),
                                       group=Sex,color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
   scale_y_continuous(limits = c(-15, 15)) +
@@ -1146,8 +1131,205 @@ ggplot(data = df_census_us_age_all,
         legend.title = element_blank(),
         axis.title = element_text(size = 16,family = "serif"),
         axis.text = element_text(size = 16,family = "serif"))
+```
 
-### education
-df_census_us_edu <- bruceR::import("ACSST5Y2021.S1501-2023-02-08T080006.csv")
+```{r US data education}
+### education: 
+# American Community Survey
+# B15001SEX BY AGE BY EDUCATIONAL ATTAINMENT FOR THE POPULATION 18 YEARS AND OVER
+# 2021: ACS 5-Year Estimates Detailed Tables
+df_census_us_edu <- bruceR::import("ACSDT5Y2021.B15001-2023-02-08T135043.csv") %>%
+  dplyr::select(`Label (Grouping)`, contains("Estimate")) %>%
+  dplyr::rename(Label = 1,
+                Estimate = 2) %>%
+  dplyr::mutate(Estimate = as.integer(gsub(",", "", as.character(.$Estimate))),
+                #Label = str_remove_all(Label, " ")
+                )
 
+df_census_us_edu_all <- df_census_us_edu %>%
+  dplyr::slice(-c(1, 2, 43)) %>%
+  dplyr::mutate(Sex = rep(c("Male", "Female"), each=40),
+                Label = str_trim(Label, side = "both")) %>% # find this function took me > 20 minutes.
+  dplyr::mutate(Edu = dplyr::case_when(Label == "Less than 9th grade" ~ "Primary",
+                                       Label == "9th to 12th grade, no diploma" ~ "Primary",
+                                       Label == "High school graduate (includes equivalency)" ~ "Secondary",
+                                       Label == "Some college, no degree" ~ "Secondary",
+                                       Label == "Bachelor's degree" ~ "Bachelor",
+                                       Label == "Graduate or professional degree" ~ "Graduate",
+                                       TRUE ~ "Other"
+                                       ),
+                ageBins = rep(rep(c("18-24", "25-34", "35-44","45-64", ">=65"), each=8), 2)) %>%
+  dplyr::filter(Edu != "Other") %>%
+  dplyr::group_by(Sex, Edu) %>%
+  dplyr::summarise(N = sum(Estimate)) %>%
+  dplyr::ungroup() %>% 
+  dplyr::mutate(Edu = factor(Edu, 
+                             levels = c("NoSchool", "Primary", "Secondary",
+                                        "Bachelor", "Graduate")),
+                Sex = factor(Sex, levels = c("Male", "Female"))) %>%
+  dplyr::arrange(Sex, Edu) %>%
+  tidyr::complete(Sex, Edu,
+                  fill = list(N =0)) %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 4) * 100,
+                Source = "Census_2021")
+
+df_ruggeri_us_edu <- df_us_ruggeri2022 %>%
+  dplyr::filter(!is.na(EducationCompleted)) %>%
+  dplyr::mutate(Edu = dplyr::case_when(EducationCompleted  == "MBA" ~ "Graduate",
+                                EducationCompleted  == "PhD" ~ "Graduate",
+                                EducationCompleted  == "Graduate" ~ "Graduate",
+                                EducationCompleted  == "Primary ed." ~ "Primary",
+                                EducationCompleted  == "Secondary ed." ~ "Secondary",
+                                EducationCompleted  == "Technical ed." ~ "Bachelor",
+                                EducationCompleted  == "Bachelor" ~ "Bachelor",
+                                )) %>%
+  dplyr::group_by(Gender, Edu) %>%
+  dplyr::summarise(N = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::rename(Sex = Gender) %>%
+  dplyr::mutate(Edu = factor(Edu, levels = c("NoSchool", "Primary", "Secondary",
+                                        "Bachelor", "Graduate")),
+                Sex = factor(Sex, levels = c("Male", "Female"))) %>%
+  tidyr::complete(Sex, Edu,
+                  fill = list(N =0)) %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 4) * 100,
+                Source = "Ruggeri_2022")
+
+df_us_edu <- rbind(df_ruggeri_us_edu, df_census_us_edu_all)
+
+ggplot(df_us_edu, aes(x=Proportion, y=Sex, fill=Edu)) +
+  geom_col(alpha = .75)+
+  labs(y="Sex") + 
+  scale_fill_discrete(label=c("NoSchool", "Primary", "Secondary", "Bachelor", "Graduate")) +
+  theme_classic() +
+  # guides(y="axis_nested") +
+  theme(legend.title = element_text(size = 15,family = "serif"),
+        axis.title= element_text(size = 15,family = "serif"),
+        axis.text = element_text(size = 10,family = "serif"),
+        strip.text = element_text(size = 15,family = "serif"),
+        strip.background = element_rect(fill = NA,color = NA),
+        panel.border = element_rect(fill = NA,color = "black")) +
+  scale_x_continuous(breaks = seq(0, 1, by = 0.1)) +
+  facet_wrap(~ Source, scales = "free")
+
+ggplot(data= df_census_us_edu_all, 
+       aes(x=Edu, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
+  geom_col(alpha=0.5, width = 1) +
+  geom_line(data = df_ruggeri_us_edu, 
+            aes(x=Edu,
+                y = ifelse(Sex == "Male", -Proportion, Proportion),
+                group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+  # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
+  coord_flip() +
+  labs(y="Proportion", x = "Education attainments", color=NULL) + 
+  annotate("text",label= "italic(Male)", x=5,y=-20, parse=TRUE,size=8, family = "serif") +
+  annotate("text",label= "italic(Female)", x=5,y=20, parse=TRUE,size=8,family = "serif") +
+  scale_color_manual(values = c("red","blue")) +
+  theme_classic() +
+  theme(panel.border =element_rect(fill=NA,color="black"),
+        legend.position ="bottom",
+        legend.box.spacing = unit(2,"pt"),
+        legend.text = element_text(size = 16, family = "serif"),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 16,family = "serif"),
+        axis.text = element_text(size = 16,family = "serif"))
+```
+
+```{r US data Map}
+
+propBins_us <- c("<=0.49", "0.5-0.99", "1.0-1.49", "1.5-1.99",
+              "2-4.99", "5-11.99", ">=12")
+
+df_census_us_geo <- bruceR::import("DECENNIALPL2020.P1-2023-02-08T080125.csv") %>%
+  dplyr::slice(1) %>%
+  tidyr::pivot_longer(cols = "Alabama":"Puerto Rico", 
+                      names_to = "State",
+                      values_to = "Pop") %>%
+  dplyr::select(State, Pop) %>%
+  dplyr::mutate(Pop = as.integer(gsub(",", "", as.character(.$Pop)))) %>%
+  dplyr::mutate(Proportion = round(Pop / sum(Pop), 4) * 100,
+                Source = "Cenesus_2020") %>%
+  dplyr::mutate(propBins = cut(Proportion, 
+                              breaks=c(0, 0.5, 1, 1.5, 2, 5, 12, 20), 
+                              labels=propBins_us),
+                propBins = factor(propBins, 
+                                  levels = c("0", propBins_us))
+                ) %>%
+  dplyr::arrange(State)
+
+df_census_us_geo_p <- us_median_age %>%
+  dplyr::arrange(NAME) %>%
+  dplyr::mutate(Proportion = df_census_us_geo$Proportion,
+                propBins = df_census_us_geo$propBins)
+
+df_ruggeri_us_geo <- df_us_ruggeri2022 %>%
+  dplyr::filter(!is.na(REGION)) %>%
+  dplyr::group_by(REGION) %>%
+  dplyr::summarise(N = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::filter(REGION %in% df_census_us_geo$State) %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 4) * 100,
+                Source = "Ruggeri_2022") %>%
+  dplyr::mutate(propBins = cut(Proportion, 
+                              breaks=c(0, 0.5, 1, 1.5, 2, 5, 12, 20), 
+                              labels=propBins_us),
+                propBins = factor(propBins, 
+                                  levels = c("0", propBins_us))
+                ) %>%
+  dplyr::arrange(Proportion) %>%
+  dplyr::mutate(REGION = factor(REGION,
+                                levels = df_census_us_geo$State)) %>%
+  tidyr::complete(REGION, fill = list(Proportion=0, propBins = "0"))
+  
+df_ruggeri_us_geo_p <- us_median_age %>%
+  dplyr::arrange(NAME) %>%
+  dplyr::mutate(Proportion = df_ruggeri_us_geo$Proportion,
+                propBins = df_ruggeri_us_geo$propBins)
+
+# library(tidycensus)
+# library(tidyverse)
+# library(tigris)
+
+# census_api_key("321ed99e90327e7474975d8e95427fcc69bb2bba", install = TRUE, overwrite=TRUE)
+# readRenviron("~/.Renviron")
+# 
+# us_median_age <- get_acs(
+#   geography = "state",
+#   variables = "B01002_001",
+#   year = 2019,
+#   survey = "acs1",
+#   geometry = TRUE,
+#   resolution = "20m"
+# ) %>%
+#   shift_geometry()
+
+p_census_us_geo <- ggplot(data = df_census_us_geo_p, aes(fill = propBins)) + 
+  geom_sf() + 
+  scale_fill_manual("Proportion",
+                    values = c("#FFFFFF", "#C6DBEF","#9ECAE1","#6BAED6",
+                               "#4292C6", "#2171B5", "#08519C","#08306B"),
+                    # breaks = c("0","1",   "2", "3",
+                    #            "4", "5", "6","7"),
+                    labels = c("0", propBins_us),
+                     drop = FALSE
+      ) + 
+  labs(#title = "Distribution of population",
+       caption = "Data source: 2020 DECENNIALPL, US Census Bureau") + 
+  theme_void()
+
+p_ruggeri_us_geo <- ggplot(data = df_ruggeri_us_geo_p, aes(fill = propBins)) + 
+  geom_sf() + 
+  scale_fill_manual("Proportion",
+                    values = c("#FFFFFF", "#C6DBEF","#9ECAE1","#6BAED6",
+                               "#4292C6", "#2171B5", "#08519C","#08306B"),
+                    # breaks = c("0","1",   "2", "3",
+                    #            "4", "5", "6","7"),
+                    labels = c("0", propBins_us),
+                     drop = FALSE
+      ) + 
+  labs(#title = "Distribution of population",
+       caption = "Data source: Ruggeri et al 2022 NHB") + 
+  theme_void()
+
+p_census_us_geo + p_ruggeri_us_geo
 ```
