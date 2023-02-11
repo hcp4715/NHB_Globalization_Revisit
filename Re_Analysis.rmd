@@ -134,8 +134,7 @@ Total number of participants in China is n = `r length(unique(df_cn_ruggeri2022$
 
 Note that here we used only "female" and "male" to quickly check the data.
 
-```{r CHN Sex and Age, message=FALSE, warning=FALSE}
-
+```{r CHN Sex ratio and Age, message=FALSE, warning=FALSE}
 df_cn_ruggeri2022_sex <- df_cn_ruggeri2022 %>%
   dplyr::filter(Gender == "Female" | Gender == "Male") %>%
   dplyr::count(Gender) %>%
@@ -250,7 +249,7 @@ fig1b <- ggplot(data= df_cn_census_age, aes(x=ageBins, y=ifelse(Sex=="Male", -Pr
 fig1b
 ```
 
-### Education
+## Education
 
 The coding of education in Census data and in Ruggeri et al. (2022) is different:
 
@@ -339,11 +338,15 @@ fig1c <- ggplot(data= df_cn_census_edu,
 # fig1 <- fig1a + fig1b + fig1c + plot_annotation(tag_levels = 'A')
 # ggsave("fig1_CHNData.pdf", fig1, device = "pdf", width=20, height = 9)
 
-fig1c
+fig1_abc <- fig1a + fig1b + fig1c + plot_annotation(tag_levels = 'A')#  + plot_layout(heights = c(1, 1.3))
+
+ggsave("fig1_abc_CHNData.pdf", fig1_abc, device = "pdf", width=15, height = 9)
+
+fig1_abc
 ```
 
 
-### Geographical 
+## Geographical distribution
 
 After examining the proportion of data from each province, we have the following seven levels:
 
@@ -358,13 +361,13 @@ After examining the proportion of data from each province, we have the following
 We used these levels to color the map.
 
 ```{r CN geo dist}
-df_census7_geo_adults <- df_census7_geo %>%
+df_cn_census_geo_adults <- df_cn_census_geo %>%
   dplyr::select(Regions_CN, 17:ncol(.)) %>%
   dplyr::select(Regions_CN, Regions_EN, everything()) %>%
   dplyr::mutate_at(c(3:56), as.numeric) %>%
   dplyr::filter(Regions_EN != "Whole_Country_Mainland") 
 
-df_census7_geo_adults_all <- df_census7_geo_adults %>%
+df_cn_census_geo_adults_all <- df_cn_census_geo_adults %>%
   dplyr::select(-contains("male")) %>%
   dplyr::mutate(N = rowSums(across(where(is.numeric)))) %>%
   dplyr::select(Regions_CN, Regions_EN,N) %>%
@@ -378,24 +381,24 @@ df_census7_geo_adults_all <- df_census7_geo_adults %>%
                                             "20~24.9%",">25%"))) %>%
   dplyr::arrange(desc(Proportion))
 
-df_census7_geo_adults_female <- df_census7_geo_adults %>%
+df_cn_census_geo_adults_female <- df_cn_census_geo_adults %>%
   dplyr::select(Regions_CN, Regions_EN, contains("female")) %>%
   dplyr::mutate(N_female = rowSums(across(where(is.numeric)))) %>%
   dplyr::select(Regions_CN, Regions_EN, N_female) 
 
-df_census7_geo_adults_male <- df_census7_geo_adults %>%
+df_cn_census_geo_adults_male <- df_cn_census_geo_adults %>%
   dplyr::select(Regions_CN, Regions_EN, contains("_male")) %>%
   dplyr::mutate(N_male = rowSums(across(where(is.numeric)))) %>%
   dplyr::select(Regions_CN, Regions_EN, N_male) 
 
-df_census7_geo_adults_sex <- df_census7_geo_adults_female %>%
-  dplyr::left_join(., df_census7_geo_adults_male) %>%
+df_cn_census_geo_adults_sex <- df_cn_census_geo_adults_female %>%
+  dplyr::left_join(., df_cn_census_geo_adults_male) %>%
   tidyr::pivot_longer(c(N_female, N_male), names_to = "Sex", values_to = "N") %>%
   dplyr::mutate(Sex = gsub("N_", "", Sex),
                 Sex = ifelse(Sex == "female", "Female", "Male"),
                 Proportion = round(N / sum(N), 3) * 100)  %>%
   dplyr::mutate(Regions_EN = factor(Regions_EN,
-                                    levels = df_census7_geo_adults_all$Regions_EN))
+                                    levels = df_cn_census_geo_adults_all$Regions_EN))
 
 df_cn_ruggeri2022_geo_sex <- df_cn_ruggeri2022 %>%
   dplyr::rename(Regions_EN = REGION, Sex=Gender) %>%
@@ -408,9 +411,10 @@ df_cn_ruggeri2022_geo_sex <- df_cn_ruggeri2022 %>%
   dplyr::arrange(N) %>%
   dplyr::mutate(Proportion = round(N / sum(N), 3) * 100,
                 Regions_EN = factor(Regions_EN,
-                                    levels = df_census7_geo_adults_all$Regions_EN)) 
+                                    levels = df_cn_census_geo_adults_all$Regions_EN)) 
 
-fig1d <- ggplot(data= df_census7_geo_adults_sex, 
+# similar plot as for age and educational attainment, but this fig does not suit other countries, not presented in the end.
+ggplot(data= df_cn_census_geo_adults_sex, 
                 aes(x=Regions_EN, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
   geom_col(alpha=0.5, width = 1) +
   geom_line(data = df_cn_ruggeri2022_geo_sex, 
@@ -432,16 +436,6 @@ fig1d <- ggplot(data= df_census7_geo_adults_sex,
         axis.title = element_text(size = 16,family = "serif"),
         axis.text = element_text(size = 16,family = "serif"))
 
-fig1 <- fig1a + fig1c + fig1b  + fig1d + plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1,1.3))
-
-ggsave("fig1_CHNData.pdf", fig1, device = "pdf", width=15, height = 20)
-
-fig1
-```
-
-
-```{r figs1 geospatial dist}
-
 ### preparing the map
 pacman::p_load(geojsonsf, RColorBrewer, rgdal, ggplot2, maptools, mapproj, ggsn, ggspatial, readxl, sf, cowplot)
 
@@ -462,8 +456,6 @@ df_cn_ruggeri2022_geo <- df_cn_ruggeri2022 %>%
                                             "20~24.9%",">25%"))) 
   
 ### the code was largely learnt from: https://github.com/liangliangzhuang/R_example
-
-
 
 # API_pre <- "http://xzqh.mca.gov.cn/data/" # get map data from website
 # ChinaMap <- sf::st_read(dsn = paste0(API_pre, "quanguo.json"), stringsAsFactors=FALSE) 
@@ -495,13 +487,13 @@ colour$colour_psySample[colour$province %in% df_cn_ruggeri2022_geo$REGION[df_cn_
 colour$colour_psySample[colour$province %in% df_cn_ruggeri2022_geo$REGION[df_cn_ruggeri2022_geo$PropBins == ">25%"]] <- 7
 
 ## assign value for colour based on census 7
-colour$colour_census[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins == "< 0.9%"]] <- 1
-colour$colour_census[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins == "1~4.9%"]] <- 2
-colour$colour_census[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins =="5~9.9%"]] <- 3
-colour$colour_census[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins =="10~14.9%"]] <- 4
-colour$colour_census[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins =="15~19.9%"]] <- 5
-colour$colour_census[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins == "20~24.9%"]] <- 6
-colour$colour_census[colour$province %in% df_census7_geo_adults_all$Regions_EN[df_census7_geo_adults_all$PropBins == ">25%"]] <- 7
+colour$colour_census[colour$province %in% df_cn_census_geo_adults_all$Regions_EN[df_cn_census_geo_adults_all$PropBins == "< 0.9%"]] <- 1
+colour$colour_census[colour$province %in% df_cn_census_geo_adults_all$Regions_EN[df_cn_census_geo_adults_all$PropBins == "1~4.9%"]] <- 2
+colour$colour_census[colour$province %in% df_cn_census_geo_adults_all$Regions_EN[df_cn_census_geo_adults_all$PropBins =="5~9.9%"]] <- 3
+colour$colour_census[colour$province %in% df_cn_census_geo_adults_all$Regions_EN[df_cn_census_geo_adults_all$PropBins =="10~14.9%"]] <- 4
+colour$colour_census[colour$province %in% df_cn_census_geo_adults_all$Regions_EN[df_cn_census_geo_adults_all$PropBins =="15~19.9%"]] <- 5
+colour$colour_census[colour$province %in% df_cn_census_geo_adults_all$Regions_EN[df_cn_census_geo_adults_all$PropBins == "20~24.9%"]] <- 6
+colour$colour_census[colour$province %in% df_cn_census_geo_adults_all$Regions_EN[df_cn_census_geo_adults_all$PropBins == ">25%"]] <- 7
 
 colour <- colour %>%
   dplyr::mutate(colour_psySample = factor(colour_psySample, 
@@ -509,18 +501,15 @@ colour <- colour %>%
                 colour_census = factor(colour_census, 
                                     levels = c("0","1", "2", "3", "4", "5", "6","7")))
 
-ChinaMap2 <- dplyr::left_join(ChinaMap,colour,by= "QUHUADAIMA")
+ChinaMap2 <- dplyr::left_join(ChinaMap, colour,by= "QUHUADAIMA")
 # head(colour)
-```
 
-```{r}
 # check color spectrum
 # brewer.pal(n=9, name="Blues")
 # "#F7FBFF" "#DEEBF7" "#C6DBEF" "#9ECAE1" "#6BAED6" "#4292C6" "#2171B5" "#08519C" "#08306B"
 
 # load south China sea's data and plot
 # Nanhai <- sf::read_sf('CHNMap/Nanhai.geojson') 
-
 Nanhai_map <- ggplot() +
    ggplot2::geom_sf(data = ChinaMap2, fill='NA', size=0.5) + 
    ggplot2::geom_sf(data = Nanhai, color='black', size=0.5)+
@@ -538,7 +527,7 @@ Nanhai_map <- ggplot() +
 
 
 # plot the main part
-fig2a_1 <- ggplot2::ggplot() +
+fig1d_1 <- ggplot2::ggplot() +
   ggplot2::geom_sf(data = ChinaMap2,
                    aes(fill = colour_psySample),
                    show.legend = TRUE) +
@@ -558,8 +547,7 @@ fig2a_1 <- ggplot2::ggplot() +
         size = 3,
         check_overlap = TRUE
       ) +
-      labs(title = "Geographical distribution of participants from Ruggeri_2022") +
-      
+      labs(title = "Geographical distribution (Ruggeri_2022)") +
       theme(
         plot.title = element_text(
           color = "black",
@@ -588,14 +576,8 @@ fig2a_1 <- ggplot2::ggplot() +
       ) # +
   # guides(fill = guide_legend(nrow = 1), label.position = "bottom")
 
-
-# # 使用cowplot包将大图小图拼在一起
-# fig2a <- cowplot::ggdraw() +
-#    cowplot::draw_plot(fig2a_1) +
-#    cowplot::draw_plot(Nanhai_map, x = 0.7, y = 0.085, width = 0.13, height = 0.39)
-
 # use patch work to insert figures
-fig2a <- fig2a_1 + inset_element(
+fig1d <- fig1d_1 + inset_element(
   Nanhai_map,
   left = 0.8,
   bottom = 0.1,
@@ -603,14 +585,8 @@ fig2a <- fig2a_1 + inset_element(
   top = 0.4
 ) + plot_layout(tag_level = 'new')
 
-fig2a
 
-# ggsave("fig2a_CHNData.pdf", fig2a, device = "pdf", width=10, height = 15)
-```
-
-
-```{r}
-fig2b_1 <-  ggplot() +
+fig1e_1 <-  ggplot() +
   geom_sf(
     data = ChinaMap2,
     aes(fill = colour_census)) +
@@ -634,7 +610,7 @@ fig2b_1 <-  ggplot() +
         check_overlap = TRUE
       ) +
       guides(fill="none") + 
-      labs(title = "Geographical distribution of population from census 7 of China (mainland)") +
+      labs(title = "Geographical distribution (Census data)") +
       theme(
         plot.title = element_text(
           color = "black",
@@ -658,7 +634,7 @@ fig2b_1 <-  ggplot() +
       )
 
 # use patch work to insert figures
-fig2b <- fig2b_1 + inset_element(
+fig1e <- fig1e_1 + inset_element(
   Nanhai_map,
   left = 0.8,
   bottom = 0.1,
@@ -666,53 +642,79 @@ fig2b <- fig2b_1 + inset_element(
   top = 0.4
 ) + plot_layout(tag_level = 'new')
 
-fig2 <- (fig2b | fig2a) + plot_layout(guides = "keep") # + plot_annotation(tag_levels = c('A', '1'))
-fig2
+fig1de <- (fig1e | fig1d) + plot_layout(guides = "keep") #+ plot_annotation(tag_levels = c('D', '1'))
 
-ggsave("fig2_CHNData.pdf", fig2, device = "pdf", width=20, height = 15)
+fig1de
+
+ggsave("fig1_de_CHNData.pdf", fig1de, device = "pdf", width=20, height = 15)
 ```
 
+# Nigeria Data
 
-```{r Nigeria data}
-## data source
-# http://nigeria-education.org/data
-# https://data.un.org/default.aspx
-# most recent data:
-# https://dhsprogram.com/methodology/survey/survey-display-528.cfm
+The data of Nigerial are from different sources. 
 
-# https://en.wikipedia.org/wiki/Demographics_of_Nigeria
+For age and sex data, we extracted data from World bank, which has 2021 data.
 
-df_world_1 <- read_csv('Data_extracte_WorldBankData_Series_Data.csv')
-df_world_2 <- read_csv('Data_extracte_WorldBankData_Series_Metadata.csv')
-  
-str(df_world_1)
-str(df_world_2)
-  
-df_ng_2021 <- df_world_1 %>%
+The geographical data are from [wikipeida](https://en.wikipedia.org/wiki/Demographics_of_Nigeria).
+
+The educational attainment data are from [DHS](https://dhsprogram.com/methodology/survey/survey-display-528.cfm)
+
+```{r Nigeria Sex ratio}
+df_ng_wb <- bruceR::import('Data_extracte_WorldBankData_Series_Data.csv')
+# str(df_ng_wb)
+# We will use the 2021 data 
+df_ng_census2021 <- df_ng_wb %>%
   dplyr::filter(`Country Name` == "Nigeria") %>%
   dplyr::select(1,3, 4, 9) %>%
   dplyr::rename("YR2021" = `2021 [YR2021]`) %>%
   dplyr::mutate(YR2021_num = as.numeric(YR2021)) %>%
   dplyr::filter(!is.na(YR2021_num)) 
 
-df_ng_2021_age <- df_ng_2021 %>%
-  dplyr::filter(str_detect(`Series Name`,"%")) %>%
-  dplyr::filter(str_detect(`Series Name`,"ages")) %>%
-  dplyr::mutate(Agebins = str_replace(`Series Name`, "Population ages ", "")) %>%
-  dplyr::mutate(Agebins = str_replace(Agebins, " and above", "-120")) %>%
-  dplyr::filter(str_detect(Agebins, "male")) %>%
-  tidyr::separate(., col = Agebins, into = c("age", "sex", "note"), sep = ",|\\(") %>%
-  dplyr::mutate(sex = str_replace_all(sex, "\\s", "")) %>% # remove all white space
-  dplyr::mutate(note = str_replace(note, "\\)", "")) %>%
-  dplyr::mutate(Percent = YR2021_num/100)
-
-df_ng_2021_pop <-  df_ng_2021 %>%
+df_ng_census2021_pop <-  df_ng_census2021 %>%
   dplyr::filter(!str_detect(`Series Name`,"%|\\(|-|\\d")) %>%
   dplyr::mutate(Cat = str_replace(`Series Name`, "Population, | population|,|Population in ", "")) %>%
   dplyr::mutate(Cat = str_replace(Cat, "largest city", "largest_city")) %>%
   dplyr::select(YR2021_num, Cat) %>%
-  tidyr::pivot_wider(names_from = Cat, values_from = YR2021_num)
+  tidyr::pivot_wider(names_from = Cat, values_from = YR2021_num) 
 
+### Sex ratio
+df_ng_census2021_sex <- df_ng_census2021_pop %>%
+  dplyr::select(female, male) %>%
+  tidyr::pivot_longer(female:male, names_to = "Sex", values_to = "N") %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 4) * 100,
+                Source = "Census_2021",
+                Sex = ifelse(Sex == "female", "Female", "Male"),
+                Sex = factor(Sex, levels = c("Female", "Male"))) %>%
+  dplyr::select(Source, Sex, Proportion)
+  
+df_ng_ruggeri_sex <- df_ng_ruggeri %>%
+  dplyr::filter(Gender == "Female" | Gender == "Male") %>%
+  dplyr::count(Gender) %>%
+  dplyr::mutate(Proportion = round(n / sum(n), 4) * 100,
+                Source = "Ruggeri_2022")  %>%
+  dplyr::rename(Sex = Gender) %>%
+  dplyr::select(Source, Sex, Proportion) %>%
+  dplyr::mutate(Sex = ifelse(Sex == "Female", "Female", "Male"),
+                Sex = factor(Sex, levels = c("Female", "Male")))
+
+df_ng_sex_ratio <- rbind(df_ng_census2021_sex, df_ng_ruggeri_sex)
+
+fig2a <- ggplot(df_ng_sex_ratio, aes(Source, Proportion,fill=Sex)) +
+  geom_col() +
+  theme_classic()+
+  xlab("Data sources") +
+  theme(legend.position = "bottom",
+        legend.key.size = unit(20,"pt"),
+        legend.box.spacing = unit(4,"pt"),
+        legend.title = element_blank(),
+        axis.title = element_text(size = 16, family = "serif"),
+        legend.text = element_text(size = 16, family = "serif"),
+        axis.text = element_text(size =16, family = "serif"))
+
+fig2a 
+```
+
+```{r Nigeria age bins}
 Age_bins_ng_all <- c("00-04", "05-09", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", 
                  "50-54", "55-59", "60-64", "65-69", "70-74", "75-79","80-120")
 
@@ -722,12 +724,21 @@ Age_bins_ng_val <- c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-4
 Age_bins_ng_final <- c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", 
                        "50-54", "55-59", "60-64", ">=65")
 
-df_ng_2021_age_final <- df_ng_2021_age %>%
+df_ng_census2021_age <- df_ng_census2021 %>%
+  dplyr::filter(str_detect(`Series Name`,"%")) %>%
+  dplyr::filter(str_detect(`Series Name`,"ages")) %>%
+  dplyr::mutate(Agebins = str_replace(`Series Name`, "Population ages ", "")) %>%
+  dplyr::mutate(Agebins = str_replace(Agebins, " and above", "-120")) %>%
+  dplyr::filter(str_detect(Agebins, "male")) %>%
+  tidyr::separate(., col = Agebins, into = c("age", "sex", "note"), sep = ",|\\(") %>%
+  dplyr::mutate(sex = str_replace_all(sex, "\\s", "")) %>% # remove all white space
+  dplyr::mutate(note = str_replace(note, "\\)", "")) %>%
+  dplyr::mutate(Percent = YR2021_num/100) %>%
   dplyr::mutate(sex = str_replace_all(sex, "\\s", "")) %>%
   dplyr::mutate(Pop = ifelse(sex == "female", 
-                             round(Percent * df_ng_2021_pop$female, 0),
-                             round(Percent * df_ng_2021_pop$male,0)),
-                Pop_percent = Pop/df_ng_2021_pop$total) %>%
+                             round(Percent * df_ng_census2021_pop$female, 0),
+                             round(Percent * df_ng_census2021_pop$male,0)),
+                Pop_percent = Pop/df_ng_census2021_pop$total) %>%
   dplyr::filter(age %in% Age_bins_ng_val) %>%
   dplyr::select(2,3,6,7, 11, 10, 1) %>%
   dplyr::mutate(ageBins = age) %>%
@@ -736,47 +747,38 @@ df_ng_2021_age_final <- df_ng_2021_age %>%
                 Proportion = Pop_percent) %>%
   dplyr::mutate(Proportion = Proportion * 100,
                 Sex = ifelse(Sex == "male", "Male", "Female")) %>%
-  dplyr::select(ageBins, Sex, Proportion)
+  dplyr::select(ageBins, Sex, Proportion)%>%
+  dplyr::mutate(ageBins = ifelse(ageBins %in% Age_bins_ng_val[1:10], ageBins, # sum all above 65
+                                 ">=65"),
+                ageBins = factor(ageBins, levels = Age_bins_ng_final)) %>%
+  dplyr::group_by(ageBins, Sex) %>%
+  dplyr::summarise(Proportion = sum(Proportion)) %>%
+  dplyr::ungroup()
 
-df_ng_2021_age_final_1 <- df_ng_2021_age_final %>%
-  dplyr::filter(ageBins %in% Age_bins_ng_val[1:10])
-
-df_ng_2021_age_final_2 <- df_ng_2021_age_final %>%
-  dplyr::filter(ageBins %in% Age_bins_ng_val[11:14]) %>%
-  dplyr::group_by(Sex) %>%
-  dplyr::summarise(n_prop = sum(Proportion)) %>%
-  dplyr::ungroup() %>%
-  dplyr::rename(Proportion = n_prop) %>%
-  dplyr::mutate(ageBins = ">=65") %>%
-  dplyr::bind_rows(., df_ng_2021_age_final_1) %>%
-  dplyr::mutate(ageBins = factor(ageBins, 
-                                 levels = Age_bins_ng_final)) %>%
-  dplyr::arrange(ageBins)
-  
-
-dat_ruggeri_ng <- dat_unique %>%
+# Nigeria's data from Ruggeri
+df_ng_ruggeri <- dat_unique %>%
   dplyr::filter(Residence == "Nigeria") %>%
   dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" ) %>%
   dplyr::filter(Gender == "Female" | Gender == "Male")
 
-dat_ruggeri_ng_age <- dat_ruggeri_ng %>%
+df_ng_ruggeri_age <- df_ng_ruggeri %>%
   dplyr::filter(!is.na(Age)) %>%
     dplyr::mutate(ageBins = cut(Age, 
-                                  breaks=c(15, 20, 25, 30, 35, 40, 45,
-                                           50, 55, 60, 65, Inf), 
-                                  labels=Age_bins_ng_final),
+                                breaks=c(15, 20, 25, 30, 35, 40, 45,
+                                         50, 55, 60, 65, Inf), 
+                                labels=Age_bins_ng_final),
                 ageBins = factor(ageBins, 
-                                     levels =Age_bins_ng_final)) %>%
+                                 levels =Age_bins_ng_final)) %>%
   dplyr::mutate(Sex = as.character(Gender)) %>%
   dplyr::count(ageBins, Sex) %>%
   dplyr::mutate(Proportion = round(n / sum(n), 4) * 100) %>%
   tidyr::complete(ageBins, Sex, fill=list(Proportion=0)) %>%
   dplyr::mutate(Site = "Ruggeri_etal_2022")
   
-ggplot(data = df_ng_2021_age_final_2, 
+fig2b <- ggplot(data = df_ng_census2021_age, 
        aes(x=ageBins, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
   geom_col(alpha=0.5, width = 1) +
-  geom_line(data = dat_ruggeri_ng_age, aes(x=ageBins,
+  geom_line(data = df_ng_ruggeri_age, aes(x=ageBins,
                                       y = ifelse(Sex == "Male", -Proportion, Proportion),
                                       group=Sex,color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
   scale_y_continuous(limits = c(-21, 21)) +
@@ -794,116 +796,8 @@ ggplot(data = df_ng_2021_age_final_2,
         axis.title = element_text(size = 16,family = "serif"),
         axis.text = element_text(size = 16,family = "serif"))
 
+fig2b
 ```
-
-
-```{r Nigeria Map}
-# copied from https://en.wikipedia.org/wiki/List_of_Nigerian_states_by_population#cite_note-2
-# ng_data <- read_clip_tbl()
-# 
-# ng_data <- ng_data %>%
-#   dplyr::rename(Orders = 1)
-# 
-# ng_data <- ng_data %>%
-#   dplyr::rename(Pop_2006 = 3,
-#                 Pop_2019 = 4)
-# 
-# ng_data_new <- ng_data %>%
-#   dplyr::mutate(State = str_remove(State, " State"),
-#                 Orders = ifelse(Orders == "–", "37", Orders),
-#                 Pop_2019 = str_remove_all(Pop_2019, ",")) %>%
-#   dplyr::mutate(Pop_2019 = as.numeric(Pop_2019)) %>%
-#   dplyr::filter(State != "Nigeria") %>%
-#   dplyr::select(-Pop_2006) %>%
-#   dplyr::mutate(Proportion = round(Pop_2019 / sum(Pop_2019), 3) * 100)
-# 
-# write_csv(ng_data_new, "NG_pop_2019_wiki.csv", )
-
-df_ng_reg_2019 <- bruceR::import("NG_pop_2019_wiki.csv")
-  
-# extract Nigeria's data
-dat_ruggeri_ng <- dat_unique %>%
-  dplyr::filter(Residence == "Nigeria") %>%
-  dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" )
-
-dat_ng_Sex <- dat_ng %>%
-  dplyr::filter(Gender == "Female" | Gender == "Male") %>%
-  dplyr::count(Gender) %>%
-  dplyr::mutate(Proportion = round(n / sum(n), 2) * 100,
-                Site = "Ruggeri_2022") %>%
-  dplyr::select(Site, Gender, Proportion) %>%
-  dplyr::rename(Sex = Gender)
-
-df_pop_ng_sex <- ng_data %>%
-  dplyr::filter(states == "")
-  dplyr::select(pop_female, pop_male) %>%
-  dplyr::mutate_if(is.character, as.numeric) %>%
-  # dplyr::select(-Age) %>%
-  colSums() %>%
-  data.frame() %>%
-  dplyr::rename(N=".")
-
-df_ng_reg_2019 <- bruceR::import("NG_pop_2019_wiki.csv") %>%
-  dplyr::select(State, Proportion) %>%
-  dplyr::rename(state = State) %>%
-  dplyr::arrange(state)
-
-bb <- c(0, 0.001, 0.5, 5, 10, 20, 50, 100)
-color_val <- c("#FFFFFF","#9ECAE1","#6BAED6", # , "#C6DBEF"
-                               "#4292C6", "#2171B5", "#08519C","#08306B")
-
-map_ng(region = df_ng_reg_2019$state, x = df_ng_pop_2019$Proportion, breaks = bb, col = 'Blues', show.text = FALSE, leg.title = "Proportions (%)")
-
-
-df_ng_reg_Ruggeri2022 <- dat_ng %>%
-  dplyr::filter(!is.na(REGION)) %>%
-  dplyr::rename(state = REGION) %>%
-  dplyr::mutate(state = as.character(state),
-                state = ifelse(state == "Andamawa", "Adamawa", state)) %>% # correct two values that are not the name of states
-  dplyr::arrange(state)
-
-df_ng_reg_Ruggeri2022_prop <- df_ng_reg_Ruggeri2022 %>%
-  dplyr::group_by(state) %>%
-  dplyr::summarise(state_n = n()) %>%
-  dplyr::ungroup() %>%
-  dplyr::mutate(Proportion = round(state_n / sum(state_n), 3) * 100) %>%
-  dplyr::mutate(state = ifelse(state %in% naijR::states(), state, naijR::states()))
-
-df_tmp <- data.frame(state = naijR::states(),
-                     state_n = 0,
-                     Proportion = 0) %>%
-  dplyr::filter(!(state %in% df_ng_reg_Ruggeri2022_prop$state))
-
-df_ng_reg_Ruggeri2022_prop <- rbind(df_ng_reg_Ruggeri2022_prop, df_tmp) %>%
-  dplyr::arrange(state)
-
-
-map_ng(region = df_ng_reg_Ruggeri2022_prop$state, x = df_ng_reg_Ruggeri2022_prop$Proportion, breaks = bb, col = 'Blues', show.text = FALSE, leg.title = "Proportions (%)")
-
-ss <- states()
-numStates <- length(ss)
-vv <- sample(LETTERS[1:5], numStates, TRUE)
-
-# Create a data frame and view top rows
-dd <- data.frame(state = ss, letter = vv)
-head(dd)
-
-map_ng(data = dd)
-
-map_ng(region = states(), x = vv, col = "red", show.text = FALSE)
-
-nn <- runif(numStates, max = 100)  # random real numbers ranging from 0 - 100
-bb <- c(0, 40, 60, 100)
-
-p_reg_ng_ruggeri2022 <- map_ng(region = states(), x = nn, breaks = bb, col = 'YlOrRd', show.text = FALSE)
-
-library(patchwork)
-
-p_reg_ng <- (p_reg_ng_wiki2019 + p_reg_ng_ruggeri2022)
-
-ng_df <- readr::read_csv("nga_general_2020_csv.zip")
-```
-
 ```{r Nigeria edu}
 
 ### tried to use data from world bank, but did not find useful information
@@ -948,53 +842,41 @@ ng_df <- readr::read_csv("nga_general_2020_csv.zip")
 #                           educ = c("No_Edu", "Some_Primary", "Complted primary", "Some_secondary", 
 #                                    "Completed_secondary", "More_than_secondary"))
 
-ng_edu_prop <- data.frame(Female = c(35, 14, 16, 23, 12), # originally sum up to 99, randomly
-                          Male = c(22, 14, 16, 32, 16), # originally sum up to 101
+df_ng_DHS2018_edu <- data.frame(Female = c(35, 14, 16, 23, 12), # originally sum up to 99, randomly added on to 100%
+                          Male = c(22, 14, 16, 32, 16),   # originally sum up to 101
                           Edu = c("NoSchool", "Primary", "Some_secondary", 
-                                   "Completed_secondary", "Tertiary")) %>%
+                                   "Secondary", "Tertiary")) %>%
   dplyr::mutate(Female = Female/2,
                 Male = Male/2) %>%
   tidyr::pivot_longer(cols = Female:Male,names_to = "Sex", values_to = "Proportion") %>%
-  dplyr::mutate(Edu = factor(Edu, levels = c("NoSchool", "Primary", "Some_secondary", "Completed_secondary",
-                                        "Tertiary")))
-
+  dplyr::mutate(Sex = factor(Sex, levels = c("Female", "Male"))) %>%
+  dplyr::mutate(Edu = factor(Edu, 
+                             levels = c("NoSchool", "Primary", "Some_secondary", "Secondary", "Tertiary"))) %>%
+  dplyr::select(Sex, Edu, Proportion)
 
 ## Prepare data from Ruggeri et al (2022)
-dat_ng_edu <- dat_ng %>%
-  dplyr::group_by(Gender, EducationCompleted) %>%
-  dplyr::summarise(N_edu = n()) %>%
-  dplyr::ungroup() %>%
-  dplyr::filter(!is.na(EducationCompleted))
-
-dat_ng_edu$Edu <- dplyr::recode(dat_ng_edu$EducationCompleted,
-                                Graduate = "Tertiary",
-                                MBA = "Tertiary",
-                                `Primary ed.` = "Primary",
-                                `Secondary ed.` = "Completed_secondary",
-                                `Technical ed.` = "Tertiary",
-                                `No formal ed.` = "NoSchool",
-                                Bachelor = "Tertiary",
-                                ) %>%
-  factor(., levels = c("NoSchool", "Primary", "Some_secondary", "Completed_secondary",
-                                        "Tertiary")) 
-  
-dat_ng_edu_prop <- dat_ng_edu %>%
-  # dplyr::select(-EducationCompleted) %>%
-  dplyr::filter(Gender == "Male" | Gender == "Female") %>%
+df_ng_ruggeri_edu <- df_ng_ruggeri %>%
+  dplyr::filter(!is.na(EducationCompleted)) %>%
+  dplyr::mutate(Edu = dplyr::case_when(EducationCompleted == "Bachelor" ~ "Tertiary",
+                                       EducationCompleted == "Secondary ed." ~ "Secondary",
+                                       EducationCompleted == "Technical ed." ~ "Tertiary",
+                                       TRUE ~ "Other"
+                                ),
+                Edu = factor(Edu, levels = c("NoSchool", "Primary", "Some_secondary", "Secondary", "Tertiary"))) %>%
   dplyr::mutate(Gender = factor(Gender, levels = c("Female", "Male"))) %>%
   dplyr::rename(Sex = Gender) %>%
-  dplyr::arrange(Sex, Edu) %>%
   dplyr::group_by(Sex, Edu) %>%
-  dplyr::summarise(N_new = sum(N_edu)) %>%
+  dplyr::summarise(N = n()) %>%
   dplyr::ungroup() %>%
-  dplyr::mutate(Proportion = round(N_new / sum(N_new), 4) * 100) %>%
+  dplyr::mutate(Proportion = round(N / sum(N), 4) * 100) %>%
   tidyr::complete(Sex, Edu,
-                  fill = list(Proportion =0))
+                  fill = list(Proportion =0))%>%
+  dplyr::select(Sex, Edu, Proportion)
 
-ggplot(data= ng_edu_prop, 
-       aes(x=Edu, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
+fig2c <- ggplot(data= df_ng_DHS2018_edu,
+                aes(x=Edu, y=ifelse(Sex=="Male", -Proportion, Proportion), fill=Sex)) +
   geom_col(alpha=0.5, width = 1) +
-  geom_line(data = dat_ng_edu_prop, 
+  geom_line(data = df_ng_ruggeri_edu, 
             aes(x=Edu,
                 y = ifelse(Sex == "Male", -Proportion, Proportion),
                 group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
@@ -1013,6 +895,64 @@ ggplot(data= ng_edu_prop,
         axis.title = element_text(size = 16,family = "serif"),
         axis.text = element_text(size = 16,family = "serif"))
 ```
+
+```{r Nigeria Map}
+# copied from https://en.wikipedia.org/wiki/List_of_Nigerian_states_by_population#cite_note-2
+# ng_data <- read_clip_tbl()
+# 
+# ng_data <- ng_data %>%
+#   dplyr::rename(Orders = 1)
+# 
+# ng_data <- ng_data %>%
+#   dplyr::rename(Pop_2006 = 3,
+#                 Pop_2019 = 4)
+# 
+# ng_data_new <- ng_data %>%
+#   dplyr::mutate(State = str_remove(State, " State"),
+#                 Orders = ifelse(Orders == "–", "37", Orders),
+#                 Pop_2019 = str_remove_all(Pop_2019, ",")) %>%
+#   dplyr::mutate(Pop_2019 = as.numeric(Pop_2019)) %>%
+#   dplyr::filter(State != "Nigeria") %>%
+#   dplyr::select(-Pop_2006) %>%
+#   dplyr::mutate(Proportion = round(Pop_2019 / sum(Pop_2019), 3) * 100)
+# 
+# write_csv(ng_data_new, "NG_pop_2019_wiki.csv", )
+
+# extract Nigeria's data
+# df_ng_ruggeri <- dat_unique %>%
+#   dplyr::filter(Residence == "Nigeria") %>%
+#   dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" )
+
+df_ng_census2019_geo <- bruceR::import("NG_pop_2019_wiki.csv") %>%
+  dplyr::select(State, Proportion) %>%
+  dplyr::rename(state = State) %>%
+  dplyr::arrange(state)
+
+bb <- c(0, 0.001, 0.5, 5, 10, 20, 50, 100)
+color_val <- c("#FFFFFF","#9ECAE1","#6BAED6", # , "#C6DBEF"
+                               "#4292C6", "#2171B5", "#08519C","#08306B")
+
+map_ng(region = df_ng_census2019_geo$state, x = df_ng_census2019_geo$Proportion, breaks = bb, col = 'Blues', show.text = FALSE, leg.title = "Proportions (%)")
+
+df_ng_ruggeri_geo <- dat_ng %>%
+  dplyr::filter(!is.na(REGION)) %>%
+  dplyr::rename(state = REGION) %>%
+  dplyr::mutate(state = as.character(state),
+                state = ifelse(state == "Andamawa", "Adamawa", state)) %>% # correct two values that are not the name of states
+  dplyr::arrange(state) %>%
+  dplyr::group_by(state) %>%
+  dplyr::summarise(state_n = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(Proportion = round(state_n / sum(state_n), 3) * 100) %>%
+  dplyr::mutate(state = ifelse(state %in% naijR::states(), state, naijR::states()),
+                state = factor(state, levels = naijR::states() )) %>%
+  tidyr::complete(state, fill = list(Proportion=0)) %>%
+  dplyr::mutate(state = as.character(state))
+
+map_ng(region = df_ng_ruggeri_geo$state, x = df_ng_ruggeri_geo$Proportion, breaks = bb, col = 'Blues', show.text = FALSE, leg.title = "Proportions (%)")
+
+```
+
 
 ```{r US data Sex}
 pacman::p_load("tidyverse", "tidycensus")
