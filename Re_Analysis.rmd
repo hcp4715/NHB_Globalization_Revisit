@@ -4,7 +4,8 @@ output: html_notebook
 author: "Hu Chuan-Peng"
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook for re-analyzing the sample in paper [The globalizability of temporal discounting](https://www.nature.com/articles/s41562-022-01392-w). 
+This is a [R Markdown](http://rmarkdown.rstudio.com) Notebook for re-analyzing the sample in paper [The globalizability of temporal discounting](https://www.nature.com/articles/s41562-022-01392-w). 
+
 
 Aim: Illustrate the representativeness of samples from US, China, and Nigeria in [Ruggeri et al (2022, NHB)](https://www.nature.com/articles/s41562-022-01392-w) in terms of gender, age, educational attainment, and geographical distribution. 
 
@@ -12,11 +13,9 @@ Aim: Illustrate the representativeness of samples from US, China, and Nigeria in
 
 ```{r load libraries}
 # rm(list = ls())
-
 if (!require("pacman")) install.packages("pacman")             # install the package manager pacman
 pacman::p_load('tidyverse', 'easystats', 'patchwork', 'here', 'bruceR', "tidycensus")
-pacman::p_load("tidyverse", "tidycensus")
-
+pacman::p_load('geojsonsf', 'RColorBrewer', 'rgdal', 'maptools', 'mapproj', 'ggsn', 'ggspatial', 'sf')
 ```
 
 ## Preprocessing
@@ -54,23 +53,6 @@ Here is the description of the participant in the paper:
 # df_census7_edu <- df_census7_edu %>% rename_with( ~ gsub("_fmale", "_female", .x, fixed = TRUE))  # replace "fmale" with "female"
 
 # save(df_census7_age, df_census7_edu, file = here::here("CHN_Census.RData"))
-
-# extract the Chinese from Ruggeri et al (2022)
-
-df_cn_ruggeri2022 <- dat_unique %>%
-  dplyr::filter(Residence == "China") %>%
-  dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" )
-# 
-# # clean the census data (age & sex)
-# df_census7_age<- df_census7_age %>%
-#   dplyr::select(c(1, 3, 4)) %>%
-#   # dplyr::slice(c(9:13, 16:20, 23:27, 141:145)) %>%
-#   dplyr::rename(Age=1,
-#                 Male = 2,
-#                 Female=3) %>%
-#   dplyr::mutate(Age = ifelse(Age == "100岁及以上", 100, Age)) %>% # convert >=100 to 100
-#   dplyr::mutate(Age = as.numeric(Age)) %>%
-#   dplyr::filter(!is.na(Age))
 
 # 
 # Reg_Name_EN <- c("Whole_Country_Mainland", "Beijing", "Tianjin", "Hebei", "Shanxi", "Inner Mongolia", "Liaoning",
@@ -124,10 +106,11 @@ df_cn_ruggeri2022 <- dat_unique %>%
 # df_cn_census <- df_cn_census_edu
 # df_cn_ruggeri2022 <- dat_cn
 # df_cn_census_geo <- df_census7_geo
-#save(df_cn_census, df_cn_census_geo, file = here::here("Re_Analysis_CHN.RData"))
+# save(df_cn_census, df_cn_census_geo, ChinaMap, China_border_line, file = here::here("Re_Analysis_CHN.RData"))
 
 # Load pre-processed census data and data from Ruggeri et al 2022, not that the largest age means >= that value
 load(here::here("Re_Analysis_CHN.RData"))
+load(here::here("1_2_data_files.RData"))
 ```
 
 Total number of participants in China is n = `r length(unique(df_cn_ruggeri2022$ResponseId))`.
@@ -137,6 +120,10 @@ Total number of participants in China is n = `r length(unique(df_cn_ruggeri2022$
 Note that here we used only "female" and "male" to quickly check the data.
 
 ```{r CHN Sex ratio, message=FALSE, warning=FALSE}
+df_cn_ruggeri2022 <- dat_unique %>%
+  dplyr::filter(Residence == "China") %>%
+  dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" )
+
 df_cn_ruggeri2022_sex <- df_cn_ruggeri2022 %>%
   dplyr::filter(Gender == "Female" | Gender == "Male") %>%
   dplyr::count(Gender) %>%
@@ -162,21 +149,16 @@ df_cn_census_sex <- df_cn_census %>%
 
 df_cn_sex_ratio <- rbind(df_cn_ruggeri2022_sex, df_cn_census_sex)
 
-# ### get the data for Bayesian mutlinomial test as in JASP
-# df_cn_sex_ratio_jasp <- df_cn_sex_ratio %>%
-#   tidyr::pivot_wider(names_from = Site,
-#                      values_from = Proportion)
-
 fig1a <- ggplot(df_cn_sex_ratio, aes(Site, Proportion,fill=Sex)) +
-  geom_col() +
+  geom_col(alpha = 0.5) +
   theme_classic()+
   xlab("Data sources") +
-  theme(legend.position = "bottom",
-        legend.key.size = unit(20,"pt"),
-        legend.box.spacing = unit(4,"pt"),
-        legend.title = element_blank(),
+  theme(legend.position = "none",
+        # legend.key.size = unit(20,"pt"),
+        # legend.box.spacing = unit(4,"pt"),
+        # legend.title = element_blank(),
         axis.title = element_text(size = 16, family = "serif"),
-        legend.text = element_text(size = 16, family = "serif"),
+        # legend.text = element_text(size = 16, family = "serif"),
         axis.text = element_text(size =16, family = "serif"))
 
 fig1a 
@@ -262,7 +244,7 @@ In Ruggeri et al. (2022), there are seven levels and `graduate` and `MBA` were t
 To make it comparable, we re-code both and used the following schema:
 "noschool", "primary", "secondary" (include both middle and high school), "Technical college", "Bachelor", "master" (include graduate and MBA), and "PhD".
 
-```{r CN Edu}
+```{r CN_Edu}
 df_cn_census_edu <- df_cn_census %>%
   dplyr::filter(Age >= 18) %>%
   dplyr::select(-ends_with("_all")) %>%
@@ -337,14 +319,7 @@ fig1c <- ggplot(data= df_cn_census_edu,
         axis.title = element_text(size = 16,family = "serif"),
         axis.text = element_text(size = 16,family = "serif"))
 
-# fig1 <- fig1a + fig1b + fig1c + plot_annotation(tag_levels = 'A')
-# ggsave("fig1_CHNData.pdf", fig1, device = "pdf", width=20, height = 9)
-
-# fig1_abc <- fig1a + fig1b + fig1c + plot_annotation(tag_levels = 'A')#  + plot_layout(heights = c(1, 1.3))
-# 
-# ggsave("fig1_abc_CHNData.pdf", fig1_abc, device = "pdf", width=15, height = 9)
-# 
-# fig1_abc
+fig1c
 ```
 
 
@@ -379,9 +354,15 @@ df_cn_census_geo_adults_all <- df_cn_census_geo_adults %>%
                               labels=c("< 0.9%", "1~4.9%", "5~9.9%", "10~14.9%", "15~19.9%",
                                        "20~24.9%",">25%")),
                 PropBins = factor(PropBins, 
-                                 levels = c("< 0.9%", "1~4.9%", "5~9.9%", "10~14.9%", "15~19.9%",
-                                            "20~24.9%",">25%"))) %>%
-  dplyr::arrange(desc(Proportion))
+                                  levels = c("< 0.9%", "1~4.9%", "5~9.9%", "10~14.9%", "15~19.9%",
+                                             "20~24.9%",">25%")),
+                Colors = cut(Proportion,
+                             breaks=c(0, 1, 5, 10, 15, 20, 25, 30), 
+                             labels=c("1", "2", "3", "4", "5","6","7")),
+                Colors = factor(Colors,
+                                levels = c("0","1", "2", "3", "4", "5","6","7"))
+                ) %>%
+  dplyr::arrange(desc(Regions_CN))
 
 df_cn_census_geo_adults_female <- df_cn_census_geo_adults %>%
   dplyr::select(Regions_CN, Regions_EN, contains("female")) %>%
@@ -439,7 +420,6 @@ ggplot(data= df_cn_census_geo_adults_sex,
         axis.text = element_text(size = 16,family = "serif"))
 
 ### preparing the map
-pacman::p_load(geojsonsf, RColorBrewer, rgdal, ggplot2, maptools, mapproj, ggsn, ggspatial, readxl, sf, cowplot)
 
 # count the number of participants in each province
 df_cn_ruggeri2022_geo <- df_cn_ruggeri2022 %>%
@@ -455,10 +435,10 @@ df_cn_ruggeri2022_geo <- df_cn_ruggeri2022 %>%
                                        "20~24.9%",">25%")),
                 PropBins = factor(PropBins, 
                                  levels = c("< 0.9%", "1~4.9%", "5~9.9%", "10~14.9%", "15~19.9%",
-                                            "20~24.9%",">25%"))) 
+                                            "20~24.9%",">25%")),
+                ) 
   
 ### the code was largely learnt from: https://github.com/liangliangzhuang/R_example
-
 # API_pre <- "http://xzqh.mca.gov.cn/data/" # get map data from website
 # ChinaMap <- sf::st_read(dsn = paste0(API_pre, "quanguo.json"), stringsAsFactors=FALSE) 
 sf::st_crs(ChinaMap) <- 4326 # use coordinates 4326
@@ -467,14 +447,14 @@ sf::st_crs(ChinaMap) <- 4326 # use coordinates 4326
 sf::st_crs(China_border_line) = 4326
 border_line_CN <- China_border_line[China_border_line$QUHUADAIMA == "guojiexian",]  ## select the map with borderline between province
 
-# province <- read.csv("CHNMap/province3.csv") 
-# colour <- read.csv("CHNMap/colour4.csv") 
+province <- read.csv("CHNMap/province3.csv")
+colour <- read.csv("CHNMap/colour4.csv") 
 
-province <-  province %>%   # get the province geo info
-  dplyr::rename(Regions_EN = 省市,                 # change colname to English in case of encoding error
+province <-  province %>%                             # get the province geo info
+  dplyr::rename(Regions_EN = 省市,                     # change colname to English in case of encoding error
                 capitalCity = 省会)
 
-colour <- colour %>%           # get the file for colour
+colour <- colour %>%                                   # get the file for colour
   dplyr::mutate(QUHUADAIMA = as.character(QUHUADAIMA), 
                 colour_psySample = 0,                  # add a new column for psychol sample
                 colour_census = 0)                     # add a new column for census
@@ -505,27 +485,6 @@ colour <- colour %>%
 
 ChinaMap2 <- dplyr::left_join(ChinaMap, colour,by= "QUHUADAIMA")
 # head(colour)
-
-# check color spectrum
-# brewer.pal(n=9, name="Blues")
-# "#F7FBFF" "#DEEBF7" "#C6DBEF" "#9ECAE1" "#6BAED6" "#4292C6" "#2171B5" "#08519C" "#08306B"
-
-# load south China sea's data and plot
-# Nanhai <- sf::read_sf('CHNMap/Nanhai.geojson') 
-Nanhai_map <- ggplot() +
-   ggplot2::geom_sf(data = ChinaMap2, fill='NA', size=0.5) + 
-   ggplot2::geom_sf(data = Nanhai, color='black', size=0.5)+
-  ##去掉主图的部分区域
-   ggplot2::coord_sf(ylim = c(-4028017,-1877844),xlim = c(117131.4,2115095),crs="+proj=laea +lat_0=40 +lon_0=104")+
-   theme(
-     aspect.ratio = 1.25, # 调节长宽比
-     axis.text = element_blank(),
-     axis.ticks = element_blank(),
-     axis.title = element_blank(),
-     panel.grid = element_blank(),
-     panel.background = element_blank(),
-     panel.border = element_rect(fill=NA, color="grey10", linetype=1,size=0.5),
-     plot.margin=unit(c(0,0,0,0),"mm"))
 
 # plot the main part
 fig1d_1 <- ggplot2::ggplot() +
@@ -577,13 +536,13 @@ fig1d_1 <- ggplot2::ggplot() +
   # guides(fill = guide_legend(nrow = 1), label.position = "bottom")
 
 # use patch work to insert figures
-fig1d <- fig1d_1 + inset_element(
-  Nanhai_map,
-  left = 0.8,
-  bottom = 0.1,
-  right = 1,
-  top = 0.4
-) + plot_layout(tag_level = 'new')
+# fig1d <- fig1d_1 + inset_element(
+#   Nanhai_map,
+#   left = 0.8,
+#   bottom = 0.1,
+#   right = 1,
+#   top = 0.4
+# ) + plot_layout(tag_level = 'new')
 
 
 fig1e_1 <-  ggplot() +
@@ -633,20 +592,14 @@ fig1e_1 <-  ggplot() +
         style = north_arrow_fancy_orienteering()
       )
 
-# use patch work to insert figures
-fig1e <- fig1e_1 + inset_element(
-  Nanhai_map,
-  left = 0.8,
-  bottom = 0.1,
-  right = 1,
-  top = 0.4
-) + plot_layout(tag_level = 'new')
-
-# fig1de <- (fig1e | fig1d) + plot_layout(guides = "keep") #+ plot_annotation(tag_levels = c('D', '1'))
-# 
-# fig1de
-
-# ggsave("fig1_de_CHNData.pdf", fig1de, device = "pdf", width=20, height = 15)
+# # use patch work to insert figures
+# fig1e <- fig1e_1 + inset_element(
+#   Nanhai_map,
+#   left = 0.8,
+#   bottom = 0.1,
+#   right = 1,
+#   top = 0.4
+# ) + plot_layout(tag_level = 'new')
 
 fig1 <- (fig1a + fig1b + fig1c + plot_layout(guides = "collect") ) /
   (fig1e_1 + fig1d_1 + plot_layout(guides = "collect")) + 
@@ -654,7 +607,7 @@ fig1 <- (fig1a + fig1b + fig1c + plot_layout(guides = "collect") ) /
   theme(plot.tag = element_text(size = 24))
 
 ggsave("fig1_CN.pdf", fig1, device = "pdf", width=18, height = 15)
-
+fig1
 ```
 
 # Nigeria Data
@@ -667,8 +620,14 @@ The geographical data are from [wikipeida](https://en.wikipedia.org/wiki/Demogra
 
 The educational attainment data are from [DHS](https://dhsprogram.com/methodology/survey/survey-display-528.cfm)
 
+## Sex ratio
 ```{r Nigeria Sex ratio}
 df_ng_wb <- bruceR::import('Data_extracte_WorldBankData_Series_Data.csv')
+# Nigeria's data from Ruggeri
+df_ng_ruggeri <- dat_unique %>%
+  dplyr::filter(Residence == "Nigeria") %>%
+  dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" ) %>%
+  dplyr::filter(Gender == "Female" | Gender == "Male")
 # str(df_ng_wb)
 # We will use the 2021 data 
 df_ng_census2021 <- df_ng_wb %>%
@@ -708,20 +667,20 @@ df_ng_ruggeri_sex <- df_ng_ruggeri %>%
 df_ng_sex_ratio <- rbind(df_ng_census2021_sex, df_ng_ruggeri_sex)
 
 fig2a <- ggplot(df_ng_sex_ratio, aes(Source, Proportion,fill=Sex)) +
-  geom_col() +
+  geom_col(alpha = 0.5) +
   theme_classic()+
   xlab("Data sources") +
-  theme(legend.position = "bottom",
-        legend.key.size = unit(20,"pt"),
-        legend.box.spacing = unit(4,"pt"),
-        legend.title = element_blank(),
+  theme(legend.position = "none",
+        # legend.key.size = unit(20,"pt"),
+        # legend.box.spacing = unit(4,"pt"),
+        # legend.title = element_blank(),
         axis.title = element_text(size = 16, family = "serif"),
-        legend.text = element_text(size = 16, family = "serif"),
+        # legend.text = element_text(size = 16, family = "serif"),
         axis.text = element_text(size =16, family = "serif"))
 
 fig2a 
 ```
-
+## Age bins
 ```{r Nigeria age bins}
 Age_bins_ng_all <- c("00-04", "05-09", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", 
                  "50-54", "55-59", "60-64", "65-69", "70-74", "75-79","80-120")
@@ -763,12 +722,6 @@ df_ng_census2021_age <- df_ng_census2021 %>%
   dplyr::summarise(Proportion = sum(Proportion)) %>%
   dplyr::ungroup()
 
-# Nigeria's data from Ruggeri
-df_ng_ruggeri <- dat_unique %>%
-  dplyr::filter(Residence == "Nigeria") %>%
-  dplyr::select(ResponseId, Gender, EducationCompleted, Residence, Age, "Ethnic", "REGION" ) %>%
-  dplyr::filter(Gender == "Female" | Gender == "Male")
-
 df_ng_ruggeri_age <- df_ng_ruggeri %>%
   dplyr::filter(!is.na(Age)) %>%
     dplyr::mutate(ageBins = cut(Age, 
@@ -806,6 +759,8 @@ fig2b <- ggplot(data = df_ng_census2021_age,
 
 fig2b
 ```
+
+## Educational attainments
 ```{r Nigeria edu}
 
 ### tried to use data from world bank, but did not find useful information
@@ -851,9 +806,9 @@ fig2b
 #                                    "Completed_secondary", "More_than_secondary"))
 
 df_ng_DHS2018_edu <- data.frame(Female = c(35, 14, 16, 23, 12), # originally sum up to 99, randomly added on to 100%
-                          Male = c(22, 14, 16, 32, 16),   # originally sum up to 101
-                          Edu = c("NoSchool", "Primary", "Some_secondary", 
-                                   "Secondary", "Tertiary")) %>%
+                                Male = c(22, 14, 16, 32, 16),   # originally sum up to 101
+                                Edu = c("NoSchool", "Primary", "Some_secondary", 
+                                        "Secondary", "Tertiary")) %>%
   dplyr::mutate(Female = Female/2,
                 Male = Male/2) %>%
   tidyr::pivot_longer(cols = Female:Male,names_to = "Sex", values_to = "Proportion") %>%
@@ -903,12 +858,9 @@ fig2c <- ggplot(data= df_ng_DHS2018_edu,
         axis.title = element_text(size = 16,family = "serif"),
         axis.text = element_text(size = 16,family = "serif"))
 
-# fig2_abc <- fig2a + fig2b + fig2c + plot_annotation(tag_levels = 'A')#  + plot_layout(heights = c(1, 1.3))
-# 
-# ggsave("fig2_abc_NGData.pdf", fig2_abc, device = "pdf", width=15, height = 9)
-
-fig2_abc
+fig2c
 ```
+## Geo-distribution
 
 ```{r Nigeria Map}
 # copied from https://en.wikipedia.org/wiki/List_of_Nigerian_states_by_population#cite_note-2
@@ -1079,9 +1031,12 @@ fig2 <- (fig2a + fig2b + fig2c + plot_layout(guides = "collect") ) /
   theme(plot.tag = element_text(size = 24))
 
 ggsave("fig2_NG.pdf", fig2, device = "pdf", width=18, height = 15)
+fig2
 ```
 
 # US data
+
+## sex ratio
 ```{r US data Sex}
 ## data downloaded from: https://data.census.gov
 df_us_census_age <- bruceR::import("ACSST5Y2021.S0101-2023-02-08T075713.csv") %>%
@@ -1129,13 +1084,15 @@ fig3a <- ggplot(df_us_sex_ratio, aes(Site, Proportion,fill=Sex)) +
   theme_classic()+
   #coord_flip() +
   xlab("Data sources") +
-  theme(legend.position = "bottom",
-        legend.key.size = unit(20,"pt"),
-        legend.box.spacing = unit(4,"pt"),
-        legend.title = element_blank(),
+  theme(legend.position = "none",
+        #legend.key.size = unit(20,"pt"),
+        #legend.box.spacing = unit(4,"pt"),
+        #legend.title = element_blank(),
         axis.title = element_text(size = 16, family = "serif"),
-        legend.text = element_text(size = 16, family = "serif"),
+        #legend.text = element_text(size = 16, family = "serif"),
         axis.text = element_text(size =16, family = "serif"))
+
+fig3a
 ```
 
 ```{r US data age bins}
@@ -1257,6 +1214,7 @@ df_us_ruggeri_edu <- df_us_ruggeri2022 %>%
 
 df_us_edu <- rbind(df_us_ruggeri_edu, df_us_census_edu_all)
 
+# tried to use col plot, not used in the end
 ggplot(df_us_edu, aes(x=Proportion, y=Source, fill=Edu)) +
   geom_col(alpha = .75)+
   labs(y="Sex") + 
@@ -1314,7 +1272,7 @@ fig3c
 # ) %>%
 #   shift_geometry()
 # df_us_map <- us_median_age # data downloaded from gov
-save(df_us_map, file = here::here("Re_Analysis_USA.RData"))
+# save(df_us_map, file = here::here("Re_Analysis_USA.RData"))
 
 load(here::here("Re_Analysis_USA.RData"))
 
@@ -1458,17 +1416,11 @@ fig3e <- ggplot(data = df_us_map, aes(fill = df_us_ruggeri_geo$Colors)) +
         style = ggspatial::north_arrow_fancy_orienteering()
       ) 
 
-# fig3de <- fig3d + fig3e + plot_layout(guides = "collect")
-# 
-# ggsave("fig3_de_NGData.pdf", fig3de, device = "pdf", width=20, height = 15)
-# 
-# fig3de
-
 fig3 <- (fig3a + fig3b + fig3c + plot_layout(guides = "collect") ) /
   (fig3d + fig3e + plot_layout(guides = "collect")) + 
   plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1, 1.5)) &
   theme(plot.tag = element_text(size = 24))
 
 ggsave("fig3_US.pdf", fig3, device = "pdf", width=18, height = 15)
-
+fig3
 ```
