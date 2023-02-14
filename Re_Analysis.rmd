@@ -109,8 +109,27 @@ Here is the description of the participant in the paper:
 # save(df_cn_census, df_cn_census_geo, ChinaMap, China_border_line, file = here::here("Re_Analysis_CHN.RData"))
 
 # Load pre-processed census data and data from Ruggeri et al 2022, not that the largest age means >= that value
-load(here::here("Re_Analysis_CHN.RData"))
+
+# load the data from Ruggeri 2022
 load(here::here("1_2_data_files.RData"))
+
+# load data for Chinese sample
+load(here::here("Re_Analysis_CHN.RData"))
+province <- bruceR::import("CHNMap/province3.csv")    # for geo plot
+colour   <- bruceR::import("CHNMap/colour4.csv")      # for geo plot
+
+# import data for Nigeria
+df_ng_wb <- bruceR::import('Data_extracte_WorldBankData_Series_Data.csv')
+load(here::here("Re_Analysis_NG.RData"))
+# the two files below are also needed
+# "NG_pop_2019_wiki.csv"  # for geo
+# "Re_Analysis_NG.RData"  # for geo plot
+
+# load data for US
+load(here::here("Re_Analysis_USA.RData"))    # for geo plots
+# "ACSST5Y2021.S0101-2023-02-08T075713.csv"
+# "ACSDT5Y2021.B15001-2023-02-08T135043.csv" 
+# "DECENNIALPL2020.P1-2023-02-08T080125.csv"
 ```
 
 Total number of participants in China is n = `r length(unique(df_cn_ruggeri2022$ResponseId))`.
@@ -447,8 +466,7 @@ sf::st_crs(ChinaMap) <- 4326 # use coordinates 4326
 sf::st_crs(China_border_line) = 4326
 border_line_CN <- China_border_line[China_border_line$QUHUADAIMA == "guojiexian",]  ## select the map with borderline between province
 
-province <- read.csv("CHNMap/province3.csv")
-colour <- read.csv("CHNMap/colour4.csv") 
+
 
 province <-  province %>%                             # get the province geo info
   dplyr::rename(Regions_EN = 省市,                     # change colname to English in case of encoding error
@@ -532,18 +550,7 @@ fig1d_1 <- ggplot2::ggplot() +
         location = 'tl',
         which_north = 'false',
         style = north_arrow_fancy_orienteering()
-      ) # +
-  # guides(fill = guide_legend(nrow = 1), label.position = "bottom")
-
-# use patch work to insert figures
-# fig1d <- fig1d_1 + inset_element(
-#   Nanhai_map,
-#   left = 0.8,
-#   bottom = 0.1,
-#   right = 1,
-#   top = 0.4
-# ) + plot_layout(tag_level = 'new')
-
+      )
 
 fig1e_1 <-  ggplot() +
   geom_sf(
@@ -592,15 +599,6 @@ fig1e_1 <-  ggplot() +
         style = north_arrow_fancy_orienteering()
       )
 
-# # use patch work to insert figures
-# fig1e <- fig1e_1 + inset_element(
-#   Nanhai_map,
-#   left = 0.8,
-#   bottom = 0.1,
-#   right = 1,
-#   top = 0.4
-# ) + plot_layout(tag_level = 'new')
-
 fig1 <- (fig1a + fig1b + fig1c + plot_layout(guides = "collect") ) /
   (fig1e_1 + fig1d_1 + plot_layout(guides = "collect")) + 
   plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1, 1.5)) &
@@ -622,7 +620,7 @@ The educational attainment data are from [DHS](https://dhsprogram.com/methodolog
 
 ## Sex ratio
 ```{r Nigeria Sex ratio}
-df_ng_wb <- bruceR::import('Data_extracte_WorldBankData_Series_Data.csv')
+
 # Nigeria's data from Ruggeri
 df_ng_ruggeri <- dat_unique %>%
   dplyr::filter(Residence == "Nigeria") %>%
@@ -1273,8 +1271,6 @@ fig3c
 #   shift_geometry()
 # df_us_map <- us_median_age # data downloaded from gov
 # save(df_us_map, file = here::here("Re_Analysis_USA.RData"))
-
-load(here::here("Re_Analysis_USA.RData"))
 
 df_us_census_geo <- bruceR::import("DECENNIALPL2020.P1-2023-02-08T080125.csv") %>%
   dplyr::slice(1) %>%
