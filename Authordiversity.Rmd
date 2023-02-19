@@ -1,0 +1,120 @@
+---
+title: "Ruggeri et al 2022"
+author: "Sakshi"
+date: "2023-02-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#####################
+## Load Libraries ##
+#####################
+
+```{r}
+#download packages
+packages <- c("tidyverse", "readxl", "plyr", "ggplot2")
+invisible(lapply(packages, library, character.only = TRUE))
+rm(packages)
+
+```
+
+#####################
+## Import the data ##
+#####################
+
+```{r}
+
+#first remove existing variables from the working space
+rm(list=ls())
+
+#load data 
+#setwd()
+df <- read_excel('/Users/sakshighai/Desktop/Ruggeri et al 2022_author diversity.xlsx')
+
+```
+#####################
+## Author Country Diversity ##
+#####################
+
+We calculate the number of studies based on global area, author affiliation 
+```{r}
+
+#PBS Courses 
+prop.table(table(df$"Region")) 
+
+#Display the number of studies for each global area (Global North vs Global South)
+prop.table(table(df$Area))
+
+#Display the number of studies for each global area (Global North vs Global South)
+prop.table(table(df$`Underepresented Countries`))
+
+```
+#####################
+## Visualizing author diversity  ##
+#####################
+
+Out of 25 Global South countries sampled, 14 countries represented: Lebanon, Nepal, Brazil, México, Kazakhstan, China, Singapore, Nigeria, Egypt, Indonesia, Argentina, Iran, South Africa, Paraguay. 11 Countries that were not represented Ethiopia, Ghana, India, Jordan, Kenya, Malaysia, Pakistan, Turkey, Vietnam, Panama, Turkey
+
+```{r}
+
+#Load World map data 
+WorldData <- map_data('world') %>% filter(region != "Antarctica") %>% fortify
+
+#Select Global South author data 
+df <- data.frame(region=c('Lebanon','Nepal','Brazil', "México", "Nepal", "Brazil", "Kazakhstan", "China", "Singapore", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay"), 
+                 value=c(1,2,2,1,1, 2, 2, 4, 2, 2, 1, 2, 3, 1, 1, 1), 
+                 stringsAsFactors=FALSE)
+
+
+#Plot Global South author country data
+plot1 <- ggplot() +
+    geom_map(data = WorldData, map = WorldData,
+                  aes(x = long, y = lat, group = group, map_id=region),
+                  fill = "white", colour = "#7f7f7f", size=0.5) + 
+    geom_map(data = df, map=WorldData,
+                  aes(fill=value, map_id=region),
+                  colour="#7f7f7f", size=0.5) +
+    coord_map("rectangular", lat0=0, xlim=c(-180,180), ylim=c(-60, 90)) + 
+    colorspace::scale_fill_continuous_sequential(palette = "Blues", 
+                                               begin = .07, end = .79) +
+    scale_y_continuous(breaks=c()) +
+    scale_x_continuous(breaks=c()) +
+    labs(fill="legend", title="Global South Author Affilation", x="", y="") +
+    theme_bw()
+plot1 
+
+
+library(ggpubr)
+
+
+#Select all author country data 
+df3 <- data.frame(region=c('Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Singapore", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay", "USA", "UK", "Australia", "Austria", "Belgium", "Bulgaria", "Canada", "Croatia", "Czech Republic", "Denmark", "Estonia", "France", "Georgia", "Germany", "Hungary", "Ireland", "Italy", "Israel", "Japan", "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Republic of Korea", "Serbia", "Romania", "Slovenia","Spain","Sweden", "Ukraine", "Switzerland", "Bosnia_and_Herzegovina", "Moldova", "Montenegro", "Slovakia", "Jordon", "India", "Turkey", "Pakistan", "Panama", "Vietnam", "Malaysia", "Kenya", "Jordon", "Ghana", "Ethipia"), 
+                 value=c(1,2,2,1, 2, 4, 2, 2, 1, 2, 3, 1, 1, 1, 35, 27, 1, 3, 3, 3, 2, 3, 5, 3, 1, 1, 1, 9, 1, 1, 4, 1, 3, 10, 1, 5, 2, 2, 1, 8, 3, 2, 2, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), 
+                 stringsAsFactors=FALSE)
+
+#Plot all author country data
+plot2 <- ggplot() +
+    geom_map(data = WorldData, map = WorldData,
+                  aes(x = long, y = lat, group = group, map_id=region),
+                  fill = "white", colour = "#C6DBEF", size=0.5) + 
+    geom_map(data = df3, map=WorldData,
+                  aes(fill=value, map_id=region),
+                  colour="#C6DBEF", size=0.5) +
+    coord_map("rectangular", lat0=0, xlim=c(-180,180), ylim=c(-60, 90)) + 
+    colorspace::scale_fill_continuous_sequential(palette = "Blues", 
+                                               begin = .18, end = .99) +
+    scale_y_continuous(breaks=c()) +
+    scale_x_continuous(breaks=c()) +
+    labs(fill="legend", title="Author Country Affiliation", x="", y="") +
+    theme_bw()
+
+
+plot2
+
+  
+
+```
