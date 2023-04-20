@@ -466,11 +466,9 @@ sf::st_crs(ChinaMap) <- 4326 # use coordinates 4326
 sf::st_crs(China_border_line) = 4326
 border_line_CN <- China_border_line[China_border_line$QUHUADAIMA == "guojiexian",]  ## select the map with borderline between province
 
-
-
-province <-  province %>%                             # get the province geo info
-  dplyr::rename(Regions_EN = 省市,                     # change colname to English in case of encoding error
-                capitalCity = 省会)
+# province <-  province %>%                             # get the province geo info
+#   dplyr::rename(Regions_EN = 省市,                     # change colname to English in case of encoding error
+#                 capitalCity = 省会)
 
 colour <- colour %>%                                   # get the file for colour
   dplyr::mutate(QUHUADAIMA = as.character(QUHUADAIMA), 
@@ -518,12 +516,12 @@ fig1d_1 <- ggplot2::ggplot() +
                                "10~14.9%", "15~19.9%", "20~24.9%",">25%")
                     ) +
   ggplot2::geom_sf(data = border_line_CN) +
-  geom_text(data = province,
-            aes(x = dili_Jd, y = dili_Wd, label = Regions_EN),
-        position = "identity",
-        size = 3,
-        check_overlap = TRUE
-      ) +
+  # geom_text(data = province,
+  #           aes(x = dili_Jd, y = dili_Wd, label = Regions_EN),
+  #       position = "identity",
+  #       size = 3,
+  #       check_overlap = TRUE
+  #     ) +
       labs(title = "Geographical distribution (Ruggeri_2022)") +
       theme(
         plot.title = element_text(
