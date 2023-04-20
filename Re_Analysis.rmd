@@ -115,7 +115,7 @@ load(here::here("1_2_data_files.RData"))
 
 # load data for Chinese sample
 load(here::here("Re_Analysis_CHN.RData"))
-province <- bruceR::import("CHNMap/province3.csv")    # for geo plot
+# province <- bruceR::import("CHNMap/province3.csv")    # for geo plot
 colour   <- bruceR::import("CHNMap/colour4.csv")      # for geo plot
 
 # import data for Nigeria
@@ -566,13 +566,13 @@ fig1e_1 <-  ggplot() +
         drop = FALSE  ## force to show all levels
       ) +
       geom_sf(data = border_line_CN) +
-      geom_text(
-        data = province,
-        aes(x = dili_Jd, y = dili_Wd, label = Regions_EN), ##添加省份名称
-        position = "identity",
-        size = 3,
-        check_overlap = TRUE
-      ) +
+      # geom_text(
+      #   data = province,
+      #   aes(x = dili_Jd, y = dili_Wd, label = Regions_EN), ##添加省份名称
+      #   position = "identity",
+      #   size = 3,
+      #   check_overlap = TRUE
+      # ) +
       guides(fill="none") + 
       labs(title = "Geographical distribution (Census data)") +
       theme(
@@ -1426,27 +1426,4 @@ fig3 <- (fig3a + fig3b + fig3c + plot_layout(guides = "collect") ) /
 
 ggsave("fig1_US.pdf", fig3, device = "pdf", width=18, height = 15)
 fig3
-```
-
-Save at the final fig 1
-```{r}
-# fig1_final <- ((fig2a + fig2b + fig2c + plot_layout(guides = "collect") ) /
-#                  (fig2d + fig2e + plot_layout(guides = "collect")) +
-#                  plot_annotation(tag_levels = 'A', title = "Data of Nigeria",
-#                                  theme = theme(plot.title = element_text(size = 26)))) /
-#   ((fig1a + fig1b + fig1c + plot_layout(guides = "collect") ) /
-#   (fig1e_1 + fig1d_1 + plot_layout(guides = "collect")) + 
-#   plot_annotation(tag_levels = 'A', title = "Data of China",
-#                                  theme = theme(plot.title = element_text(size = 26)))) /
-#   ((fig3a + fig3b + fig3c + plot_layout(guides = "collect") ) /
-#   (fig3d + fig3e + plot_layout(guides = "collect")) +
-#   plot_annotation(tag_levels = 'A', title = "Data of United States",
-#                                  theme = theme(plot.title = element_text(size = 26)))) + 
-#   plot_layout(nrow = 6)
-#   # plot_annotation(tag_levels = 'A', # title = "Data of United States",
-#   #                 theme = theme(plot.title = element_text(size = 26))) + 
-#   # plot_layout(heights = c(1, 1.5, 1, 1.5, 1, 1.5)) &
-#   theme(plot.tag = element_text(size = 24),
-#         text = element_text("Times"))
-# ggsave("fig1_final.pdf", fig1_final, device = "pdf", width=18, height = 45)
 ```
