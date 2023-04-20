@@ -4,8 +4,8 @@ output: html_notebook
 author: "Hu Chuan-Peng"
 ---
 
-This is a [R Markdown](http://rmarkdown.rstudio.com) Notebook for re-analyzing the sample in paper [The globalizability of temporal discounting](https://www.nature.com/articles/s41562-022-01392-w). 
 
+This is a [R Markdown](http://rmarkdown.rstudio.com) Notebook for re-analyzing the sample in paper [The globalizability of temporal discounting](https://www.nature.com/articles/s41562-022-01392-w). 
 
 Aim: Illustrate the representativeness of samples from US, China, and Nigeria in [Ruggeri et al (2022, NHB)](https://www.nature.com/articles/s41562-022-01392-w) in terms of gender, age, educational attainment, and geographical distribution. 
 
@@ -601,8 +601,11 @@ fig1e_1 <-  ggplot() +
 
 fig1 <- (fig1a + fig1b + fig1c + plot_layout(guides = "collect") ) /
   (fig1e_1 + fig1d_1 + plot_layout(guides = "collect")) + 
-  plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1, 1.5)) &
-  theme(plot.tag = element_text(size = 24))
+  plot_annotation(tag_levels = 'A', title = "Data of China",
+                  theme = theme(plot.title = element_text(size = 26))) + 
+  plot_layout(heights = c(1, 1.5)) &
+  theme(plot.tag = element_text(size = 24),
+        text = element_text("Times"))
 
 ggsave("fig1_CN.pdf", fig1, device = "pdf", width=18, height = 15)
 fig1
@@ -1025,10 +1028,13 @@ fig2e <- ggplot2::ggplot(data = df_ng_map, aes(fill = df_ng_ruggeri_geo$Colors))
 
 fig2 <- (fig2a + fig2b + fig2c + plot_layout(guides = "collect") ) /
   (fig2d + fig2e + plot_layout(guides = "collect")) + 
-  plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1, 1.5)) &
-  theme(plot.tag = element_text(size = 24))
+  plot_annotation(tag_levels = 'A', title = "Data of Nigeria",
+                  theme = theme(plot.title = element_text(size = 26))) + 
+  plot_layout(heights = c(1, 1.5)) &
+  theme(plot.tag = element_text(size = 24),
+        text = element_text("Times"))
 
-ggsave("fig2_NG.pdf", fig2, device = "pdf", width=18, height = 15)
+ggsave("fig1_NG.pdf", fig2, device = "pdf", width=18, height = 15)
 fig2
 ```
 
@@ -1414,9 +1420,35 @@ fig3e <- ggplot(data = df_us_map, aes(fill = df_us_ruggeri_geo$Colors)) +
 
 fig3 <- (fig3a + fig3b + fig3c + plot_layout(guides = "collect") ) /
   (fig3d + fig3e + plot_layout(guides = "collect")) + 
-  plot_annotation(tag_levels = 'A') + plot_layout(heights = c(1, 1.5)) &
-  theme(plot.tag = element_text(size = 24))
+  plot_annotation(tag_levels = 'A', title = "Data of United States",
+                  theme = theme(plot.title = element_text(size = 26))) + 
+  plot_layout(heights = c(1, 1.5)) &
+  theme(plot.tag = element_text(size = 24),
+        text = element_text("Times"))
 
-ggsave("fig3_US.pdf", fig3, device = "pdf", width=18, height = 15)
+ggsave("fig1_US.pdf", fig3, device = "pdf", width=18, height = 15)
 fig3
+```
+
+Save at the final fig 1
+```{r}
+# fig1_final <- ((fig2a + fig2b + fig2c + plot_layout(guides = "collect") ) /
+#                  (fig2d + fig2e + plot_layout(guides = "collect")) +
+#                  plot_annotation(tag_levels = 'A', title = "Data of Nigeria",
+#                                  theme = theme(plot.title = element_text(size = 26)))) /
+#   ((fig1a + fig1b + fig1c + plot_layout(guides = "collect") ) /
+#   (fig1e_1 + fig1d_1 + plot_layout(guides = "collect")) + 
+#   plot_annotation(tag_levels = 'A', title = "Data of China",
+#                                  theme = theme(plot.title = element_text(size = 26)))) /
+#   ((fig3a + fig3b + fig3c + plot_layout(guides = "collect") ) /
+#   (fig3d + fig3e + plot_layout(guides = "collect")) +
+#   plot_annotation(tag_levels = 'A', title = "Data of United States",
+#                                  theme = theme(plot.title = element_text(size = 26)))) + 
+#   plot_layout(nrow = 6)
+#   # plot_annotation(tag_levels = 'A', # title = "Data of United States",
+#   #                 theme = theme(plot.title = element_text(size = 26))) + 
+#   # plot_layout(heights = c(1, 1.5, 1, 1.5, 1, 1.5)) &
+#   theme(plot.tag = element_text(size = 24),
+#         text = element_text("Times"))
+# ggsave("fig1_final.pdf", fig1_final, device = "pdf", width=18, height = 45)
 ```
