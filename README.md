@@ -6,7 +6,9 @@ A) Sample diversity: We compared the data from the paper to the census data of t
 Related data files: 
 A1. Re_Analysis_CHN.RData
 A2. Re_Analysis_NG.RData
-A3. Re_Analysis_USA.RData
+A3. Re_Analysis_USA.RData'
+A4. NG_pop_2019_wiki.csv
+A5. 
 
 B) Author diversity: We compared comparing author’s country of institution (Main Script: Authordiversity.RMD)
 Related data files: 
