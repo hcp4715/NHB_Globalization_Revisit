@@ -1,34 +1,44 @@
 ---
 title: "Re-Analysis of Ruggeri et al 2022 (Pre-submission)"
-output: html_notebook
 author: "Hu Chuan-Peng"
+output:
+  html_document:
+    df_print: paged
 ---
 
+This is a [R Markdown](http://rmarkdown.rstudio.com) Notebook for re-analyzing the sample in paper [The globalizability of temporal discounting](https://www.nature.com/articles/s41562-022-01392-w).
 
-This is a [R Markdown](http://rmarkdown.rstudio.com) Notebook for re-analyzing the sample in paper [The globalizability of temporal discounting](https://www.nature.com/articles/s41562-022-01392-w). 
-
-Aim: Illustrate the representativeness of samples from US, China, and Nigeria in [Ruggeri et al (2022, NHB)](https://www.nature.com/articles/s41562-022-01392-w) in terms of gender, age, educational attainment, and geographical distribution. 
-
-# Chinese sample 
+Aim: Illustrate the representativeness of samples from US, China, and Nigeria in [Ruggeri et al (2022, NHB)](https://www.nature.com/articles/s41562-022-01392-w) in terms of gender, age, educational attainment, and geographical distribution.
 
 ```{r load libraries}
-# rm(list = ls())
+rm(list = ls())
 if (!require("pacman")) install.packages("pacman")             # install the package manager pacman
+
+# load packages with "p_load", which will automatically install packages that not exist in the system.
 pacman::p_load('tidyverse', 'easystats', 'patchwork', 'here', 'bruceR', "tidycensus")
 pacman::p_load('geojsonsf', 'RColorBrewer', 'rgdal', 'maptools', 'mapproj', 'ggsn', 'ggspatial', 'sf')
 ```
 
 ## Preprocessing
-We extracted data from Ruggeri et al (2022). Based on the description from the pre-registration, we selected adults data (>=18 yrs old) from Chinese census data.
 
-Excerpt from pre-registration (https://osf.io/jfvh4): *Adult participants from 18 years of age and up (in some countries, 19 or 21 is the minimum age to participate in research) will be recruited from 65 countries, covering 41 languages.*
+We extracted data from Ruggeri et al (2022). Based on the description from the pre-registration, we selected adults data (\>=18 yrs old) from Chinese census data.
+
+Excerpt from pre-registration (<https://osf.io/jfvh4>): *Adult participants from 18 years of age and up (in some countries, 19 or 21 is the minimum age to participate in research) will be recruited from 65 countries, covering 41 languages.*
 
 Here is the description of the participant in the paper:
 
-*The final dataset was composed of 13,629 responses from 61 countries. The original sample size was 25,877, which was reduced almost by half after we performed pre-registered data exclusions. We removed 6,141 participants (23.7%) who did not pass our attention check (a choice between receiving 10% of monthly income now or paying the same amount in one year). We removed 69 participants for presenting nonsensical responses to open data text (for example, ‘helicopter’ as gender). We removed 13 participants claiming to be over 100 years old. We included additional filters to our original exclusion criteria. Regarding the length of time for responses, individuals faster than three times the absolute deviation below the median time or that took less than 120 seconds to respond were removed. This criterion allowed us to identify 5,870 inappropriate responses. We further removed responses from IP addresses identified as either ‘tests’ or ‘spam’ by the Qualtrics service (264 answers identified). Lastly, we did not consider individuals not completing over 90% of the survey (9,434 responses failed this criterion). Note that these values add up to more than 100% because participants could fail multiple criteria.*
+*The final dataset was composed of 13,629 responses from 61 countries. The original sample size was 25,877, which was reduced almost by half after we performed pre-registered data exclusions. We removed 6,141 participants (23.7%) who did not pass our attention check (a choice between receiving 10% of monthly income now or paying the same amount in one year). We removed 69 participants for presenting nonsensical responses to open data text (for example, 'helicopter' as gender). We removed 13 participants claiming to be over 100 years old. We included additional filters to our original exclusion criteria. Regarding the length of time for responses, individuals faster than three times the absolute deviation below the median time or that took less than 120 seconds to respond were removed. This criterion allowed us to identify 5,870 inappropriate responses. We further removed responses from IP addresses identified as either 'tests' or 'spam' by the Qualtrics service (264 answers identified). Lastly, we did not consider individuals not completing over 90% of the survey (9,434 responses failed this criterion). Note that these values add up to more than 100% because participants could fail multiple criteria.*
+
+# Chinese sample
+
+The census data of China are downloaded from the national statistics bureau (). All these data are first preprocessed and stored in *.RData*.
+
+Files downloaded include:
+
+-   A0401_CNH_Census7_Age_education_edited.xls
+-   A0105_region_age_sex_edited.xls
 
 ```{r data preparation}
-
 ### code for preparing census data about education, will not used after saving RData
 # df_tmp <- bruceR::import(here::here("A0401_CNH_Census7_Age_education_edited.xls"))  # import data that downloaded from census website
 # # 
@@ -66,6 +76,7 @@ Here is the description of the participant in the paper:
 # newColNames <- gsub("岁", "years", newColNames)
 # newColNames <- gsub("及以上", "", newColNames)
 # newColNames <- gsub("-", "_", newColNames)
+
 # newColNames[c(1,2)] <- c( "Regions", "All")
 # 
 # newColNames2 <- NULL
@@ -101,40 +112,39 @@ Here is the description of the participant in the paper:
 #                 Regions_EN = Reg_Name_EN) %>%
 #   dplyr::rename(Regions_CN=Regions)
 
-# save(df_census7_edu, dat_cn, df_census7_geo, file = here::here("Re_Analysis_CHN.RData"))
 # save.image(file =  here::here("Re_Analysis_CHN.RData"))
 # df_cn_census <- df_cn_census_edu
 # df_cn_ruggeri2022 <- dat_cn
 # df_cn_census_geo <- df_census7_geo
-# save(df_cn_census, df_cn_census_geo, ChinaMap, China_border_line, file = here::here("Re_Analysis_CHN.RData"))
+# save(df_cn_census, df_cn_census_geo, ChinaMap, China_border_line, colour, file = here::here("Re_Analysis_CHN.RData"))
 
-# Load pre-processed census data and data from Ruggeri et al 2022, not that the largest age means >= that value
-
-# load the data from Ruggeri 2022
+# load the data from Ruggeri 2022, it includes three variables:
+# "dat_filter", "dat_item", "dat_unique"
 load(here::here("1_2_data_files.RData"))
 
-# load data for Chinese sample
+# load data for Chinese sample, it includes five variables:
+# "China_border_line", "ChinaMap", "colour","df_cn_census", "df_cn_census_geo"
 load(here::here("Re_Analysis_CHN.RData"))
 # province <- bruceR::import("CHNMap/province3.csv")    # for geo plot
-colour   <- bruceR::import("CHNMap/colour4.csv")      # for geo plot
+# colour   <- bruceR::import("CHNMap/colour4.csv")      # for geo plot
 
-# import data for Nigeria
-df_ng_wb <- bruceR::import('Data_extracte_WorldBankData_Series_Data.csv')
+# import data for Nigeria, it includes two variable:
+# "df_ng_wb": data extracted from World Bank, df_ng_wb <- bruceR::import('Data_extracte_WorldBankData_Series_Data.csv')
 load(here::here("Re_Analysis_NG.RData"))
 # the two files below are also needed
 # "NG_pop_2019_wiki.csv"  # for geo
 # "Re_Analysis_NG.RData"  # for geo plot
+# save(df_ng_map, df_ng_wb, file = here::here("Re_Analysis_NG.RData"))
 
-# load data for US
+# load data for US, which include one variable "df_us_map"
 load(here::here("Re_Analysis_USA.RData"))    # for geo plots
+# the data files below are also needed:
 # "ACSST5Y2021.S0101-2023-02-08T075713.csv"
 # "ACSDT5Y2021.B15001-2023-02-08T135043.csv" 
 # "DECENNIALPL2020.P1-2023-02-08T080125.csv"
 ```
 
-Total number of participants in China is n = `r length(unique(df_cn_ruggeri2022$ResponseId))`.
-
-## Sex & Age (pyramids plots)
+## Sex
 
 Note that here we used only "female" and "male" to quickly check the data.
 
@@ -183,8 +193,9 @@ fig1a <- ggplot(df_cn_sex_ratio, aes(Site, Proportion,fill=Sex)) +
 fig1a 
 ```
 
+Total number of participants in China is n = `r length(unique(df_cn_ruggeri2022$ResponseId))`.
 
-### Age bins
+## Age bins
 
 The age bins were tailored so it start with 17 years old.
 
@@ -234,7 +245,7 @@ fig1b <- ggplot(data= df_cn_census_age, aes(x=ageBins, y=ifelse(Sex=="Male", -Pr
   geom_col(alpha=0.5, width = 1) +
   geom_line(data = df_cn_ruggeri2022_age, aes(x=ageBins_pyr,
                                       y = ifelse(Sex == "male_R", -Proportion, Proportion),
-                                      group=Sex,color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+                                      group=Sex,color="Ruggeri2022"), linewidth=1, inherit.aes = FALSE) +
   # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
   coord_flip() +
   labs(y="Proportion", x = "Age bins", color=NULL)+
@@ -258,10 +269,9 @@ The coding of education in Census data and in Ruggeri et al. (2022) is different
 
 In the census data, there are 9 levels for educational attainment: "no school", "pre school", "primary school", "middle school", "high school", "Technical college", `Bachelor`, `Master`, and `PhD`.
 
-In Ruggeri et al. (2022), there are seven levels and `graduate` and `MBA` were treated as different degree: `Primary ed.`, `Secondary ed.`,  `Technical ed.`, `Bachelor`, `MBA`, `Graduate`, and  `PhD`.
+In Ruggeri et al. (2022), there are seven levels and `graduate` and `MBA` were treated as different degree: `Primary ed.`, `Secondary ed.`, `Technical ed.`, `Bachelor`, `MBA`, `Graduate`, and `PhD`.
 
-To make it comparable, we re-code both and used the following schema:
-"noschool", "primary", "secondary" (include both middle and high school), "Technical college", "Bachelor", "master" (include graduate and MBA), and "PhD".
+To make it comparable, we re-code both and used the following schema: "noschool", "primary", "secondary" (include both middle and high school), "Technical college", "Bachelor", "master" (include graduate and MBA), and "PhD".
 
 ```{r CN_Edu}
 df_cn_census_edu <- df_cn_census %>%
@@ -322,7 +332,7 @@ fig1c <- ggplot(data= df_cn_census_edu,
   geom_line(data = df_cn_ruggeri2022_edu, 
             aes(x=Edu,
                 y = ifelse(Sex == "Male", -Proportion, Proportion),
-                group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+                group=Sex, color="Ruggeri2022"), linewidth=1, inherit.aes = FALSE) +
   # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
   coord_flip() +
   labs(y="Proportion", x = "Education attainments", color=NULL) + 
@@ -341,18 +351,23 @@ fig1c <- ggplot(data= df_cn_census_edu,
 fig1c
 ```
 
-
 ## Geographical distribution
 
 After examining the proportion of data from each province, we have the following seven levels:
 
-* > 25%
-* 20% ~ 24.9%
-* 15% ~ 19.9%
-* 10% ~ 14.9%
-* 5% ~ 9.9%
-* 1% ~ 4.9%
-* < 1%
+-   \> 25%
+
+-   20% \~ 24.9%
+
+-   15% \~ 19.9%
+
+-   10% \~ 14.9%
+
+-   5% \~ 9.9%
+
+-   1% \~ 4.9%
+
+-   \< 1%
 
 We used these levels to color the map.
 
@@ -422,7 +437,7 @@ ggplot(data= df_cn_census_geo_adults_sex,
   geom_line(data = df_cn_ruggeri2022_geo_sex, 
             aes(x=Regions_EN,
                 y = ifelse(Sex == "Male", -Proportion, Proportion),
-                group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+                group=Sex, color="Ruggeri2022"), linewidth=1, inherit.aes = FALSE) +
   # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
   coord_flip() +
   labs(y="Proportion", x = "Provinces (China Mainland)", color=NULL) + 
@@ -611,7 +626,7 @@ fig1
 
 # Nigeria Data
 
-The data of Nigeria are from different sources. 
+The data of Nigeria are from different sources.
 
 For age and sex data, we extracted data from World bank, which has 2021 data.
 
@@ -620,6 +635,7 @@ The geographical data are from [wikipeida](https://en.wikipedia.org/wiki/Demogra
 The educational attainment data are from [DHS](https://dhsprogram.com/methodology/survey/survey-display-528.cfm)
 
 ## Sex ratio
+
 ```{r Nigeria Sex ratio}
 
 # Nigeria's data from Ruggeri
@@ -679,7 +695,9 @@ fig2a <- ggplot(df_ng_sex_ratio, aes(Source, Proportion,fill=Sex)) +
 
 fig2a 
 ```
+
 ## Age bins
+
 ```{r Nigeria age bins}
 Age_bins_ng_all <- c("00-04", "05-09", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", 
                  "50-54", "55-59", "60-64", "65-69", "70-74", "75-79","80-120")
@@ -740,7 +758,7 @@ fig2b <- ggplot(data = df_ng_census2021_age,
   geom_col(alpha=0.5, width = 1) +
   geom_line(data = df_ng_ruggeri_age, aes(x=ageBins,
                                       y = ifelse(Sex == "Male", -Proportion, Proportion),
-                                      group=Sex,color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+                                      group=Sex,color="Ruggeri2022"), linewidth=1, inherit.aes = FALSE) +
   scale_y_continuous(limits = c(-21, 21)) +
   coord_flip() +
   labs(y="Proportion", x = "Age bins", color=NULL)+
@@ -760,6 +778,7 @@ fig2b
 ```
 
 ## Educational attainments
+
 ```{r Nigeria edu}
 
 ### tried to use data from world bank, but did not find useful information
@@ -841,7 +860,7 @@ fig2c <- ggplot(data= df_ng_DHS2018_edu,
   geom_line(data = df_ng_ruggeri_edu, 
             aes(x=Edu,
                 y = ifelse(Sex == "Male", -Proportion, Proportion),
-                group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+                group=Sex, color="Ruggeri2022"), linewidth=1, inherit.aes = FALSE) +
   # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
   coord_flip() +
   labs(y="Proportion", x = "Education attainments", color=NULL) + 
@@ -859,6 +878,7 @@ fig2c <- ggplot(data= df_ng_DHS2018_edu,
 
 fig2c
 ```
+
 ## Geo-distribution
 
 ```{r Nigeria Map}
@@ -895,7 +915,7 @@ fig2c
 # 
 # save(df_ng_map, file = here::here("Re_Analysis_NG.RData")) # save as rdata
 
-load(here::here("Re_Analysis_NG.RData"))
+# load(here::here("Re_Analysis_NG.RData"))
 
 df_ng_census2019_geo <- bruceR::import("NG_pop_2019_wiki.csv") %>%
   dplyr::select(State, Proportion) %>%
@@ -1036,11 +1056,15 @@ ggsave("fig1_NG.pdf", fig2, device = "pdf", width=18, height = 15)
 fig2
 ```
 
+
 # US data
 
-## sex ratio
+All data used here are downloaded from <https://data.census.gov>
+
+## Sex ratio
+
 ```{r US data Sex}
-## data downloaded from: https://data.census.gov
+## import data downloaded from: https://data.census.gov
 df_us_census_age <- bruceR::import("ACSST5Y2021.S0101-2023-02-08T075713.csv") %>%
   dplyr::select(`Label (Grouping)`, contains("Estimate")) %>%
   dplyr::rename("ageBins" = 1, "Total" = 2, "Total_prop" = 3, 
@@ -1097,6 +1121,7 @@ fig3a <- ggplot(df_us_sex_ratio, aes(Site, Proportion,fill=Sex)) +
 fig3a
 ```
 
+## Age bins
 ```{r US data age bins}
 ## age bins
 df_us_census_age_all <- df_us_census_age %>%
@@ -1133,7 +1158,7 @@ fig3b <- ggplot(data = df_us_census_age_all, aes(x=ageBins, y=ifelse(Sex=="Male"
   geom_line(data = df_us_ruggeri2022_age, 
             aes(x=ageBins,
                 y = ifelse(Sex == "Male", -Proportion, Proportion),
-                group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+                group=Sex, color="Ruggeri2022"), linewidth=1, inherit.aes = FALSE) +
   scale_y_continuous(limits = c(-15, 15)) +
   coord_flip() +
   labs(y="Proportion", x = "Age bins", color=NULL)+
@@ -1151,7 +1176,10 @@ fig3b <- ggplot(data = df_us_census_age_all, aes(x=ageBins, y=ifelse(Sex=="Male"
 fig3b
 ```
 
+## Educational Attainment
+
 ```{r US data education}
+## import data downloaded from: https://data.census.gov
 ### education: 
 # American Community Survey
 # B15001SEX BY AGE BY EDUCATIONAL ATTAINMENT FOR THE POPULATION 18 YEARS AND OVER
@@ -1237,7 +1265,7 @@ fig3c <- ggplot(data= df_us_census_edu_all, aes(x=Edu, y=ifelse(Sex=="Male", -Pr
   geom_line(data = df_us_ruggeri_edu, 
             aes(x=Edu,
                 y = ifelse(Sex == "Male", -Proportion, Proportion),
-                group=Sex, color="Ruggeri2022"), size=1, inherit.aes = FALSE) +
+                group=Sex, color="Ruggeri2022"), linewidth=1, inherit.aes = FALSE) +
   # scale_y_continuous(limits = c(-15,15), sec.axis = sec_axis(~.*1, name = "Proportion (Ruggeri2022)")) +
   coord_flip() +
   labs(y="Proportion", x = "Education attainments", color=NULL) + 
@@ -1260,22 +1288,9 @@ fig3c <- ggplot(data= df_us_census_edu_all, aes(x=Edu, y=ifelse(Sex=="Male", -Pr
 fig3c
 ```
 
+## Geo-distribution
 ```{r US data Map}
-# census_api_key("", install = TRUE, overwrite=TRUE)
-# readRenviron("~/.Renviron")
-# 
-# us_median_age <- get_acs(
-#   geography = "state",
-#   variables = "B01002_001",
-#   year = 2019,
-#   survey = "acs1",
-#   geometry = TRUE,
-#   resolution = "20m"
-# ) %>%
-#   shift_geometry()
-# df_us_map <- us_median_age # data downloaded from gov
-# save(df_us_map, file = here::here("Re_Analysis_USA.RData"))
-
+## import data downloaded from: https://data.census.gov
 df_us_census_geo <- bruceR::import("DECENNIALPL2020.P1-2023-02-08T080125.csv") %>%
   dplyr::slice(1) %>%
   tidyr::pivot_longer(cols = "Alabama":"Puerto Rico", 
@@ -1300,11 +1315,7 @@ df_us_census_geo <- bruceR::import("DECENNIALPL2020.P1-2023-02-08T080125.csv") %
                 ) %>%
   dplyr::arrange(State)
 
-# df_census_us_geo_p <- us_median_age %>%
-#   dplyr::arrange(NAME) %>%
-#   dplyr::mutate(Proportion = df_us_census_geo$Proportion,
-#                 propBins = df_us_census_geo$propBins)
-
+# extract data from Ruggeri et al. 2022
 df_us_ruggeri_geo <- df_us_ruggeri2022 %>%
   dplyr::filter(!is.na(REGION)) %>%
   dplyr::group_by(REGION) %>%
@@ -1347,9 +1358,9 @@ fig3d <- ggplot(data = df_us_map, aes(fill = df_us_census_geo$Colors)) +
                                "10~14.9%", "15~19.9%", "20~24.9%",">25%"),
                     drop = FALSE,
       ) + 
-  labs(title = "Geographical distribution (Census)",
-       #caption = "Data source: 2020 DECENNIALPL, US Census Bureau",
-       ) + 
+  labs(
+    title = "Geographical distribution (Census)",
+    ) + 
   theme(
         plot.title = element_text(
           color = "black",
@@ -1359,9 +1370,6 @@ fig3d <- ggplot(data = df_us_map, aes(fill = df_us_census_geo$Colors)) +
           hjust = 0.5
         ),
         legend.title = element_blank(),
-        # legend.position = "bottom", 
-        # legend.justification = "left",
-        # legend.direction = "horizontal",
         legend.position =  c(0.9, 0.58), # position of legend
         legend.text=element_text(size=rel(1.5)),
         panel.grid = element_blank(),

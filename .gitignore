@@ -35,5 +35,8 @@ CHNMap/
 *.zip
 *WorldBank*
 
+## renv
+renv/
+renv.lock
 
 ## unpublished manuscript
