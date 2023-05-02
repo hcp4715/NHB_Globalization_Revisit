@@ -4,9 +4,7 @@ author: "Sakshi"
 date: "2023-02-15"
 output: html_document
 ---
-In this script, we compute author diversity by using author's institution affiliation as a proxy. We first coded all 171 author names and their  institution affiliation using the Global North-South classification. To measure this, we followed the United Nations' Finance Center for South-South Cooperation ( http://www.fc-ssc.org/en/partnership_program/south_south_countries), which is considered as a reliable source including a list of 78 countries. 
-
-We also corroborated this list by following the United Nations Conference on Trade and Development classification (https://unctadstat.unctad.org/EN/Classifications.html) which suggests that the developing economies broadly comprise Africa, Latin America and the Caribbean, Asia (without Israel, Japan, and the Republic of Korea), and Oceania (without Australia and New Zealand).
+In this script, we compute author diversity by using author's institution affiliation as a proxy. We first coded all 171 author names and their  institution affiliation using the Global North-South classification. To measure this, we followed the United Nations' Finance Center for South-South Cooperation (http://www.fc-ssc.org/en/partnership_program/south_south_countries), which is considered as a reliable source including a list of 78 countries (including Korea and Singapore which are highly developed country and part of the Four Asian Tigers). We also corroborated this list by following the Human Development Index (HDI) and ITU’s Telecommunication Development Bureau region classifications (https://www.itu.int/en/ITU-D/Statistics/Pages/definitions/regions.aspx) which suggests that the Global South broadly comprise Africa, Latin America and the Caribbean, and Asia (without Israel, Japan, Singapore, and the Republic of Korea).
 
 
 ```{r setup, include=FALSE}
@@ -43,7 +41,7 @@ rm(list=ls())
 
 # load data 
 # setwd()
-df <- read_excel('Ruggeri et al 2022_author diversity.xlsx') %>%
+df <- read_excel('/Users/sakshighai/Desktop/Ruggeri et al 2022_author diversity.xlsx') %>%
   dplyr::rename(Region_affiliation = "Region",
                 Area_affiliation = "Area")
 
@@ -92,8 +90,8 @@ First, we plot only Global South countries
 WorldData <- map_data('world') %>% filter(region != "Antarctica") %>% fortify
 
 #Select Global South author data 
-df <- data.frame(region=c('Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay", "Singapore"), 
-                 value=c(1, 2, 2, 1, 2, 4, 2, 1, 2, 2, 1, 1, 1, 2), 
+df <- data.frame(region=c('Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay"), 
+                 value=c(1, 2, 2, 1, 2, 4, 2, 1, 2, 2, 1, 1, 1), 
                  stringsAsFactors=FALSE)
 
 
@@ -128,7 +126,7 @@ ggsave("fig4A.pdf", plot1, device = "pdf", width=18, height = 15)
 
 *All author country affiliation plot*
 #Authors were affiliated to the following countries based in the Global South - 
-#The following were represented: 'Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay", "Singapore"
+#The following countries were represented: 'Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay"
 #11 were not represented: "Jordon", "India", "Turkey", "Pakistan", "Panama", "Vietnam", "Malaysia", "Kenya", "Ghana", "Ethiopia", Uruguay
 ```{r}
 
