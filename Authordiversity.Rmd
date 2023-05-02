@@ -4,14 +4,13 @@ author: "Sakshi"
 date: "2023-02-15"
 output: html_document
 ---
-
 In this script, we compute author diversity by using author's institution affiliation as a proxy. We first coded all 171 author names and their  institution affiliation using the Global North-South classification. To measure this, we followed the United Nations' Finance Center for South-South Cooperation ( http://www.fc-ssc.org/en/partnership_program/south_south_countries), which is considered as a reliable source including a list of 78 countries. 
 
-We also corroborated this list by following the United Nations Conference on Trade and Development classification (https://unctadstat.unctad.org/EN/Classifications.html) which suggests that the developing economies broadly comprise Africa, Latin America and the Caribbean, Asia without Israel, Japan, and the Republic of Korea, and Oceania without Australia and New Zealand.
+We also corroborated this list by following the United Nations Conference on Trade and Development classification (https://unctadstat.unctad.org/EN/Classifications.html) which suggests that the developing economies broadly comprise Africa, Latin America and the Caribbean, Asia (without Israel, Japan, and the Republic of Korea), and Oceania (without Australia and New Zealand).
 
 
 ```{r setup, include=FALSE}
-# knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
@@ -20,7 +19,7 @@ We also corroborated this list by following the United Nations Conference on Tra
 #####################
 
 ```{r}
-
+#download packages
 rm(list = ls())
 if (!require("pacman")) install.packages("pacman")             # install the package manager pacman
 
@@ -30,6 +29,7 @@ pacman::p_load("tidyverse", "readxl", "plyr", "ggplot2", "gtsummary", "knitr", "
 # invisible(lapply(packages, library, character.only = TRUE))
 # rm(packages)
 knitr::opts_chunk$set(echo = TRUE)
+
 ```
 
 #####################
@@ -37,14 +37,16 @@ knitr::opts_chunk$set(echo = TRUE)
 #####################
 
 ```{r}
+
 # first remove existing variables from the working space
 rm(list=ls())
 
 # load data 
 # setwd()
 df <- read_excel('Ruggeri et al 2022_author diversity.xlsx') %>%
-  dplyr::rename(Region = "Region Affiliation",
-                Area = "Area Affiliation")
+  dplyr::rename(Region_affiliation = "Region",
+                Area_affiliation = "Area")
+
 
 ```
 #####################
@@ -54,25 +56,19 @@ df <- read_excel('Ruggeri et al 2022_author diversity.xlsx') %>%
 We calculate the number of studies based on global area, author affiliation 
 ```{r}
 #Region-wise distibution 
-prop.table(table(df$"Region")) 
+prop.table(table(df$"Region_affiliation")) 
 
 #Display the number of studies for each global area (Global North vs Global South)
-table(df$Area)
-prop.table(table(df$Area))
+table(df$'Author Country Affiliation')
+prop.table(table(df$Area_affiliation))
 
 #Create a table 
-region <- dplyr::select(df, c("Region", "Area", "Author Country Affiliation"))
+region <- select(df, c("Region_affiliation", "Area_affiliation", "Author Country Affiliation"))
 region
 
-table(region$`Author Country Affiliation`)
-
 #Save a descriptive table of author diversity by country
-
-library(gtsummary)
-
-
 region_table <- region |> tbl_summary(
-    by = Area,
+    by = Area_affiliation,
     missing = "no",
   ) %>%
   add_overall() %>% # add column with total number of non-missing observations
@@ -86,20 +82,20 @@ region_table
 
 ``` 
 
+#####################
+## Author Country visualisations ##
+#####################
 
+First, we plot only Global South countries
 ```{r}
-# Load World map data 
-WorldData <- ggplot2::map_data('world') %>% 
-  dplyr::filter(region != "Antarctica") %>% 
-  fortify
+#Load World map data 
+WorldData <- map_data('world') %>% filter(region != "Antarctica") %>% fortify
 
-# Select Global South author data 
-df <- data.frame(region=c('Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", 
-                          "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay", 
-                          "Singapore" # is Singapore a global south country? 
-                          ), 
+#Select Global South author data 
+df <- data.frame(region=c('Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay", "Singapore"), 
                  value=c(1, 2, 2, 1, 2, 4, 2, 1, 2, 2, 1, 1, 1, 2), 
                  stringsAsFactors=FALSE)
+
 
 #Plot Global South author country data
 plot1 <- ggplot() +
@@ -122,23 +118,22 @@ theme(legend.position = "bottom",
    
 plot1 
 
-library(ggpubr)
 
-# save the plot 
-# ggsave("fig4A.pdf", plot1, device = "pdf", width=18, height = 15)
+#save the plot 
+ggsave("fig4A.pdf", plot1, device = "pdf", width=18, height = 15)
+
 
 ``` 
 
 
-*Author country affiliation plot*
-#Authors were affiliated to 24 countries based in the Global South - 
-#14 were represented: 'Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay", "Singapore"
-#11 were not represented: "Jordon", "India", "Turkey", "Pakistan", "Panama", "Vietnam", "Malaysia", "Kenya", "Jordon", "Ghana", "Ethipia"
-
+*All author country affiliation plot*
+#Authors were affiliated to the following countries based in the Global South - 
+#The following were represented: 'Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay", "Singapore"
+#11 were not represented: "Jordon", "India", "Turkey", "Pakistan", "Panama", "Vietnam", "Malaysia", "Kenya", "Ghana", "Ethiopia", Uruguay
 ```{r}
 
 #Select all author country data 
-df3 <- data.frame(region=c('Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Singapore", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay", "USA", "UK", "Australia", "Austria", "Belgium", "Bulgaria", "Canada", "Croatia", "Czech Republic", "Denmark", "Estonia", "France", "Georgia", "Germany", "Hungary", "Ireland", "Italy", "Israel", "Japan", "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Republic of Korea", "Serbia", "Romania", "Slovenia","Spain","Sweden", "Ukraine", "Switzerland", "Bosnia_and_Herzegovina", "Moldova", "Montenegro", "Slovakia", "Jordon", "India", "Turkey", "Pakistan", "Panama", "Vietnam", "Malaysia", "Kenya", "Jordon", "Ghana", "Ethipia"), 
+df3 <- data.frame(region=c('Lebanon','Nepal','Brazil', "México", "Kazakhstan", "China", "Singapore", "Nigeria", "Egypt", "Indonesia", "Argentina", "Iran", "South Africa", "Paraguay", "USA", "UK", "Australia", "Austria", "Belgium", "Bulgaria", "Canada", "Croatia", "Czech Republic", "Denmark", "Estonia", "France", "Georgia", "Germany", "Hungary", "Ireland", "Italy", "Israel", "Japan", "Netherlands", "North Macedonia", "Norway", "Poland", "Portugal", "Republic of Korea", "Serbia", "Romania", "Slovenia","Spain","Sweden", "Ukraine", "Switzerland", "Bosnia_and_Herzegovina", "Moldova", "Montenegro", "Slovakia", "Jordon", "India", "Turkey", "Pakistan", "Panama", "Vietnam", "Malaysia", "Kenya", "Uruguay", "Ghana", "Ethiopia"), 
                  value=c(1,2,2,1, 2, 4, 2, 2, 1, 2, 3, 1, 1, 1, 35, 27, 1, 3, 3, 3, 2, 3, 5, 3, 1, 1, 1, 9, 1, 1, 4, 1, 3, 10, 1, 5, 2, 2, 1, 8, 3, 2, 2, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), 
                  stringsAsFactors=FALSE)
 
@@ -156,7 +151,7 @@ plot2 <- ggplot() +
                                                begin = .18, end = .99) +
     scale_y_continuous(breaks=c()) +
     scale_x_continuous(breaks=c()) +
-    labs(fill="Percentage (%)", title="Author Institution Affiliation", x="", y="") +
+    labs(fill="legend", title="Author Institution Affiliation", x="", y="") +
   theme_classic() +
 theme(legend.position = "bottom", 
         legend.key.size = unit(0.7, 'cm'),
@@ -165,7 +160,7 @@ theme(legend.position = "bottom",
 
 plot2
 
-ggsave("fig3.pdf", plot2, device = "pdf", width=18, height = 15)
+ggsave("fig4B.pdf", plot2, device = "pdf", width=18, height = 15)
 
 ``` 
 
