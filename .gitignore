@@ -21,7 +21,7 @@ __pycache__
 .RData
 .Rhistory
 .Rproj.user
-*.Rproj
+# *.Rproj
 */.RData
 */.Rhistory
 */.Rproj.user

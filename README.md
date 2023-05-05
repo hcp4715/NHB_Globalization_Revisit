@@ -59,3 +59,17 @@ loaded via a namespace (and not attached):
 [79] MASS_7.3-58.2        rprojroot_2.0.3      withr_2.5.0          hms_1.1.3            class_7.3-21         minqa_1.2.5         
 [85] rmarkdown_2.21       carData_3.0-5        numDeriv_2016.8-1.1 
 ```
+
+## Reproducing this analysis
+
+**Note**
+
+You should have installed [R](https://cran.r-project.org/) and [Rstudio](https://posit.co/downloads/) in you machine before you trying to reproduce the analyses here.
+
+For readers who are familiar with git and Github, you can either for this repo or clone it to your machine.
+
+For readers who are not familiar with Github, please (1) find the green button "Code" and click the small triangle to show the options, and (2) click "Download ZIP" to download all the code and data shared here. See the figure below:
+
+![](./instruction_fig1.jpg)
+
+After downloading the zip file, unzip it and enter the folder "NHB_Globalization_Revisit-main", then double click "Re_Analysis.Rproj", which will open a Rstudio window if you have R and Rstudio installed.
