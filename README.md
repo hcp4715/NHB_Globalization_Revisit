@@ -2,7 +2,7 @@
 
 This repo is for re-analyzing data from [Ruggeri et al (2022, NHB)](https://www.nature.com/articles/s41562-022-01392-w). Here we conduct two sets of analysis:
 
-A)  Sample diversity: We compared the data from the paper to the census data of these three countries to show the lack of sample heterogeneity (Main Script: Re-analysis.RMD). Related data files:
+A)  Sample diversity: We compared a subset of data from the paper (i.e., three countries across the low-middle-high income classification) to the census data of these three countries to show the lack of sample heterogeneity (Main Script: Re-analysis.RMD). Related data files:
 
 -   A1. Re_Analysis_CHN.RData
 -   A2. Re_Analysis_NG.RData
@@ -12,7 +12,7 @@ A)  Sample diversity: We compared the data from the paper to the census data of 
 -   A6. ACSST5Y2021.S0101-2023-02-08T075713.csv \# US census data
 -   A7. ACSDT5Y2021.B15001-2023-02-08T135043.csv \# US data with educational attainment
 
-B)  Author diversity: We compared comparing author's country of institution (Main Script: Authordiversity.RMD). Related data files:
+B)  Author diversity: We compared each of the 171 authors country of institution to understand the extent to which local collaborators were included (Main Script: Authordiversity.RMD). Related data files:
 
 -   B1. Ruggeri et al 2022_author diversity.xlsx
 -   B2. Ruggeri et al 2022_country diversity.xlsx
