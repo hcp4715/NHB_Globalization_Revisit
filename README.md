@@ -2,7 +2,7 @@
 
 This repo is for re-analyzing data from [Ruggeri et al (2022, NHB)](https://www.nature.com/articles/s41562-022-01392-w). Here we conduct two sets of analysis:
 
-A)  Sample diversity: We compared a subset of data from the paper (i.e., three countries across the low-middle-high income classification) to the census data of these three countries to show the lack of sample heterogeneity (Main Script: Re-analysis.RMD). Related data files:
+A)  Sample diversity: We compared a subset of participant data (i.e., three countries across the low-middle-high income classification) to the census data of each of these three countries to show the lack of sample heterogeneity (Main Script: Re-analysis.RMD). Related data files:
 
 -   A1. Re_Analysis_CHN.RData
 -   A2. Re_Analysis_NG.RData
