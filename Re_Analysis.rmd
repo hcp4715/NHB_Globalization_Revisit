@@ -124,6 +124,7 @@ load(here::here("1_2_data_files.RData"))
 
 # load data for Chinese sample, it includes five variables:
 # "China_border_line", "ChinaMap", "colour","df_cn_census", "df_cn_census_geo"
+# "China_border_line", "ChinaMap" were reproduced from http://xzqh.mca.gov.cn/data/, now the official standard map was move to http://bzdt.ch.mnr.gov.cn/, the approval number is GS（2019）1651;
 load(here::here("Re_Analysis_CHN.RData"))
 # province <- bruceR::import("CHNMap/province3.csv")    # for geo plot
 # colour   <- bruceR::import("CHNMap/colour4.csv")      # for geo plot
