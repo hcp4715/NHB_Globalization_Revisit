@@ -142,6 +142,20 @@ load(here::here("Re_Analysis_USA.RData"))    # for geo plots
 # "ACSST5Y2021.S0101-2023-02-08T075713.csv"
 # "ACSDT5Y2021.B15001-2023-02-08T135043.csv" 
 # "DECENNIALPL2020.P1-2023-02-08T080125.csv"
+
+# census_api_key("", install = TRUE, overwrite=TRUE) # data downloaded from gov
+# readRenviron("~/.Renviron")
+# 
+# df_us_map <- get_acs(
+#   geography = "state",
+#   variables = "B01002_001",
+#   year = 2019,
+#   survey = "acs1",
+#   geometry = TRUE,
+#   resolution = "20m"
+# ) %>%
+#   shift_geometry()
+
 ```
 
 ## Sex
