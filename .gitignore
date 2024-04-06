@@ -26,12 +26,18 @@ __pycache__
 */.Rhistory
 */.Rproj.user
 
-## Data
+## Data that we are not allowed to share
+## 
 1_2_data_files.RData
 CHN_Census.RData
 df_chinese_subj_rr_stage1.RData
 *.xls
 CHNMap/
+CHNWebMap/
+ChinaMap*/
+Chinamap_Ali*
+Re_Analysis_CHN2.RData
+Standard_name_of_South_China_Sea_Islands.xlsx
 *.zip
 *WorldBank*
 
