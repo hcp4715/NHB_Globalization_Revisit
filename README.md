@@ -1,10 +1,10 @@
 # NHB_Globalization_Revisit
 
-This repo is for re-analyzing data from [Ruggeri et al (2022, NHB)](https://www.nature.com/articles/s41562-022-01392-w). Here we conduct two sets of analysis:
+This repo is for re-analyzing data from [Ruggeri et al (2022, NHB)](https://www.nature.com/articles/s41562-022-01392-w). Here we conduct two sets of analyses:
 
 A)  Sample diversity: We selected a subset of their data and compared participant demographics in three countries across the low-middle-high income classification to the actual census data within each country. (Main Script: Re-analysis.RMD). Related data files:
 
--   A1. Re_Analysis_CHN.RData
+-   A1. Re_Analysis_CHN.RData # note that Re_Analysis_CHN2.RData which contains the data of Standard China Map, which is not shared
 -   A2. Re_Analysis_NG.RData
 -   A3. Re_Analysis_USA.RData
 -   A4. NG_pop_2019_wiki.csv \#
@@ -62,7 +62,7 @@ loaded via a namespace (and not attached):
 
 ## Reproducing this analysis
 
-**Note**
+**Note 1**
 
 You should have installed [R](https://cran.r-project.org/) and [Rstudio](https://posit.co/downloads/) in you machine before you trying to reproduce the analyses here.
 
@@ -73,3 +73,7 @@ For readers who are not familiar with Github, please (1) find the green button "
 ![](./instruction_fig1.jpg)
 
 After downloading the zip file, unzip it and enter the folder "NHB_Globalization_Revisit-main", then double click "Re_Analysis.Rproj", which will open a Rstudio window if you have R and Rstudio installed.
+
+**Note 2**
+
+For mac users, if you have difficulties install packages needed for reproducing the code here, please consider using [this docker image](https://hub.docker.com/layers/hcp4715/rdock/nhb2024/images/sha256-d75789708ea37c8b5b6edf03fa6d0f7803f05673bfef214a8c367016984a9f45?context=repo).
