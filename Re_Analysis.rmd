@@ -20,7 +20,7 @@ if (!require("pacman")) install.packages("pacman")             # install the pac
 # load packages with "p_load", which will automatically install packages that not exist in the system.
 pacman::p_load('tidyverse', 'easystats', 'patchwork', 'here', 'bruceR', "tidycensus")
 pacman::p_load('geojsonsf', 'RColorBrewer', 'rgdal', 'mapproj', 'ggspatial', 'sf',"ggspatial",'naijR') # ggsn and maptools are not used.
-pacman::p_load("readxl", "mapchina")
+pacman::p_load("readxl", "mapchina","rjson","rlist")
 ```
 
 ## Preprocessing
@@ -459,7 +459,7 @@ SARs <- data.frame(
       Colors = c(1, 1, 2) 
       )
 
-df_cn_census_geo_adults_all <-   rbind(df_cn_census_geo_adults_all, SARs)
+df_cn_census_geo_adults_all <- rbind(df_cn_census_geo_adults_all, SARs)
 df_cn_census_geo_adults_all
 
 # similar plot as for age and educational attainment, but this fig does not suit other countries, not presented in the end.
