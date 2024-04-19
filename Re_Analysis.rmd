@@ -20,7 +20,6 @@ if (!require("pacman")) install.packages("pacman")             # install the pac
 # load packages with "p_load", which will automatically install packages that not exist in the system.
 pacman::p_load('tidyverse', 'easystats', 'patchwork', 'here', 'bruceR', "tidycensus")
 pacman::p_load('geojsonsf', 'RColorBrewer', 'rgdal', 'mapproj', 'ggspatial', 'sf',"ggspatial",'naijR') # ggsn and maptools are not used.
-pacman::p_load("readxl", "mapchina","rjson","rlist")
 ```
 
 ## Preprocessing
